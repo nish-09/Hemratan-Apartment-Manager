@@ -3,236 +3,329 @@ import { AppShell } from '@/components/layout/app-shell';
 import { StatCard } from '@/components/ui/stat-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { IndianRupee, ShieldCheck, Users, Receipt, ArrowUpRight, ArrowDownRight, BellRing, Plus, Calendar, Package, Car } from 'lucide-react';
+import {
+  IndianRupee,
+  ShieldCheck,
+  Users,
+  Receipt,
+  ArrowUpRight,
+  ArrowDownRight,
+  BellRing,
+  Plus,
+  Calendar,
+  Package,
+  Car,
+  ClipboardList,
+  Sparkles,
+  CheckCircle2,
+  Clock,
+  Wallet,
+  Building,
+} from 'lucide-react';
 import Link from 'next/link';
+import { BillingService } from '@/services/billing.service';
+import { VisitorService } from '@/services/visitor.service';
+import { DirectoryService } from '@/services/directory.service';
+import { AmenityService } from '@/services/amenity.service';
+import { AnnouncementService } from '@/services/announcement.service';
 
 export default function ResidentDashboard() {
+  const residentFlatId = 'flat-a-402';
+  const residentFlatNo = 'A-402';
+
+  // 1. Scoped Financials for Flat A-402
+  const invoices = BillingService.listInvoices({ flatId: residentFlatId });
+  const currentInvoice = invoices[0] || {
+    invoiceNumber: 'INV-202611-A402',
+    billingPeriodName: 'November 2026',
+    totalAmountPaise: 290000,
+    balanceAmountPaise: 290000,
+    dueDate: '2026-11-15',
+    status: 'ISSUED',
+  };
+  const payments = BillingService.listPayments({ flatId: residentFlatId });
+
+  // 2. Scoped Visitors for Flat A-402
+  const flatVisits = VisitorService.getVisits({ flatId: residentFlatId }).slice(0, 3);
+
+  // 3. Scoped Domestic Staff for Flat A-402
+  const { workers, recentAttendance } = DirectoryService.getDomesticStaffForResident(residentFlatId);
+
+  // 4. Scoped Amenity Bookings for Flat A-402
+  const flatBookings = AmenityService.getBookings({ flatId: residentFlatId }).slice(0, 3);
+
+  // 5. Society Circulars & Announcements
+  const announcements = AnnouncementService.getAnnouncements().slice(0, 3);
+
   return (
     <AppShell
       userName="Jonathan Patel"
       userRoleTitle="Resident • Flat A-402"
       activeRole="RESIDENT"
     >
-      {/* Quick Action Pill Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-[#FAF9FF] p-3 rounded-2xl border border-[#303044]/20">
-        <div className="flex items-center gap-2">
-          <Badge variant="green">Verified Resident</Badge>
-          <span className="text-xs font-bold text-[#77798A]">Wing A • 4th Floor • 1,450 sq.ft</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <Link href="/resident/deliveries">
-            <Button variant="outline" size="sm" className="gap-1.5 bg-[#FAF7A7] font-bold">
-              <Package className="w-3.5 h-3.5 text-[#20243A]" />
-              <span>Deliveries & Parking</span>
-            </Button>
-          </Link>
-          <Link href="/resident/visitors">
-            <Button variant="outline" size="sm" className="gap-1.5">
-              <Plus className="w-3.5 h-3.5" />
-              <span>Pre-Approve Visitor</span>
-            </Button>
-          </Link>
-          <Link href="/resident/complaints">
-            <Button variant="lime" size="sm" className="gap-1.5">
-              <Plus className="w-3.5 h-3.5" />
-              <span>Raise Complaint</span>
-            </Button>
-          </Link>
-        </div>
-      </div>
-
-      {/* 1. TOP 4 PASTEL STAT CARDS */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
-        <StatCard
-          title="Bank balance"
-          value="₹2,46,428"
-          subtitle="Society Maintenance Reserve"
-          variant="yellow"
-          icon={<IndianRupee className="w-5 h-5 text-[#20243A]" />}
-        />
-        <StatCard
-          title="Monthly savings"
-          value="₹4,124"
-          subtitle="Your Advance Fund Credit"
-          variant="blue"
-          icon={<Receipt className="w-5 h-5 text-[#20243A]" />}
-        />
-        <StatCard
-          title="Staff on duty"
-          value="8"
-          subtitle="Verified Staff Working Today"
-          variant="mint"
-          icon={<Users className="w-5 h-5 text-[#20243A]" />}
-        />
-        <StatCard
-          title="Current bill"
-          value="₹2,186.28"
-          subtitle="April Maintenance Dues (Unpaid)"
-          variant="lavender"
-          icon={<ShieldCheck className="w-5 h-5 text-[#20243A]" />}
-        />
-      </div>
-
-      {/* 2. MIDDLE SECTION: STAT WIDGETS + TREND CHART */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
-        {/* Left Sub-column: 2 Compact Metric Cards */}
-        <div className="lg:col-span-4 flex flex-col gap-4">
-          <div className="rounded-2xl border-[1.5px] border-[#303044] p-5 bg-white shadow-[2px_2px_0px_rgba(48,48,68,0.12)] flex items-center justify-between">
-            <div>
-              <div className="text-xs font-bold text-[#77798A] uppercase tracking-wider">
-                Occupied Flats
-              </div>
-              <div className="text-3xl font-extrabold text-[#20243A] mt-1">36</div>
-            </div>
-            <div className="flex items-center gap-1 bg-[#C9F2DE] border border-[#303044]/30 text-[#136338] text-xs font-extrabold px-2.5 py-1 rounded-full">
-              <ArrowUpRight className="w-3.5 h-3.5" />
-              <span>+12.4%</span>
-            </div>
+      <div className="space-y-6">
+        {/* Quick Action Pill Bar */}
+        <div className="flex flex-wrap items-center justify-between gap-3 bg-[#FAF9FF] p-3 rounded-2xl border border-[#303044]/20 shadow-[2px_2px_0px_#303044]">
+          <div className="flex items-center gap-2">
+            <Badge variant="green">Verified Resident</Badge>
+            <span className="text-xs font-bold text-[#77798A]">
+              Wing A • 4th Floor • 1,450 sq.ft • Intercom #1402
+            </span>
           </div>
-
-          <div className="rounded-2xl border-[1.5px] border-[#303044] p-5 bg-white shadow-[2px_2px_0px_rgba(48,48,68,0.12)] flex items-center justify-between">
-            <div>
-              <div className="text-xs font-bold text-[#77798A] uppercase tracking-wider">
-                My Open Requests
-              </div>
-              <div className="text-3xl font-extrabold text-[#20243A] mt-1">1</div>
-            </div>
-            <div className="flex items-center gap-1 bg-[#FCE1D8] border border-[#303044]/30 text-[#9A2D1F] text-xs font-extrabold px-2.5 py-1 rounded-full">
-              <ArrowDownRight className="w-3.5 h-3.5" />
-              <span>Plumbing #PL-104</span>
-            </div>
-          </div>
-
-          {/* Quick Notice Banner */}
-          <div className="rounded-2xl border-[1.5px] border-[#303044] p-4 bg-[#FAF7A7] shadow-[2px_2px_0px_rgba(48,48,68,0.12)] flex items-start gap-3">
-            <div className="w-8 h-8 rounded-full bg-white border border-[#303044] flex items-center justify-center shrink-0">
-              <BellRing className="w-4 h-4 text-[#20243A]" />
-            </div>
-            <div>
-              <div className="text-xs font-extrabold text-[#20243A]">Water Tank Cleaning Notice</div>
-              <p className="text-[11px] text-[#77798A] mt-0.5 font-medium leading-relaxed">
-                Overhead tank maintenance scheduled for Sunday, 10:00 AM to 02:00 PM.
-              </p>
-            </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Link href="/resident/billing">
+              <Button variant="outline" size="sm" className="gap-1.5 bg-[#FAF7A7] font-bold">
+                <Wallet className="w-3.5 h-3.5 text-[#20243A]" />
+                <span>Pay Maintenance</span>
+              </Button>
+            </Link>
+            <Link href="/resident/deliveries">
+              <Button variant="outline" size="sm" className="gap-1.5 font-bold">
+                <Package className="w-3.5 h-3.5 text-[#20243A]" />
+                <span>Deliveries &amp; Parking</span>
+              </Button>
+            </Link>
+            <Link href="/resident/visitors">
+              <Button variant="outline" size="sm" className="gap-1.5 font-bold">
+                <Plus className="w-3.5 h-3.5" />
+                <span>Pre-Approve Visitor</span>
+              </Button>
+            </Link>
+            <Link href="/resident/complaints">
+              <Button variant="lime" size="sm" className="gap-1.5 font-bold">
+                <Plus className="w-3.5 h-3.5" />
+                <span>Raise Complaint</span>
+              </Button>
+            </Link>
           </div>
         </div>
 
-        {/* Center / Right Sub-column: Activity & Collection Trend Chart */}
-        <div className="lg:col-span-8 rounded-2xl border-[1.5px] border-[#303044] p-6 bg-white shadow-[2px_2px_0px_rgba(48,48,68,0.12)] flex flex-col justify-between">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
-            <div>
-              <h2 className="text-base sm:text-lg font-extrabold text-[#20243A]">
-                Maintenance Collection Trend
-              </h2>
-              <span className="text-xs font-medium text-[#77798A]">
-                Last 7 days VS prior week
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="flex items-center gap-1.5 text-xs font-bold text-[#77798A]">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#BCA9F2] inline-block border border-[#303044]" />
-                This Week
-              </span>
-              <span className="flex items-center gap-1.5 text-xs font-bold text-[#77798A]">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#C9F36B] inline-block border border-[#303044]" />
-                Prior Week
-              </span>
-            </div>
-          </div>
-
-          {/* Neo-Brutalist SVG Multi-line Chart matching visual reference */}
-          <div className="relative w-full h-44 sm:h-52 flex items-end">
-            <svg
-              className="w-full h-full overflow-visible"
-              viewBox="0 0 600 200"
-              preserveAspectRatio="none"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <line x1="0" y1="40" x2="600" y2="40" stroke="#303044" strokeOpacity="0.08" strokeDasharray="3 3" />
-              <line x1="0" y1="90" x2="600" y2="90" stroke="#303044" strokeOpacity="0.08" strokeDasharray="3 3" />
-              <line x1="0" y1="140" x2="600" y2="140" stroke="#303044" strokeOpacity="0.08" strokeDasharray="3 3" />
-              <line x1="0" y1="190" x2="600" y2="190" stroke="#303044" strokeOpacity="0.15" />
-
-              <path
-                d="M 10 120 C 60 110, 80 145, 120 135 C 160 125, 180 170, 230 160 C 270 150, 310 100, 360 115 C 410 130, 440 160, 490 125 C 530 100, 560 130, 590 120"
-                stroke="#6BCB77"
-                strokeWidth="3"
-                strokeLinecap="round"
-              />
-
-              <path
-                d="M 10 90 C 50 75, 80 110, 120 95 C 170 80, 200 130, 250 115 C 290 105, 300 65, 340 70 C 390 75, 410 45, 450 60 C 490 75, 520 120, 560 90 C 580 80, 590 85, 595 82"
-                stroke="#BCA9F2"
-                strokeWidth="3.5"
-                strokeLinecap="round"
-              />
-
-              <circle cx="340" cy="70" r="5" fill="#BCA9F2" stroke="#303044" strokeWidth="2" />
-            </svg>
-
-            <div className="absolute left-[54%] top-[22%] -translate-x-1/2 -translate-y-full">
-              <span className="bg-[#BCA9F2] text-[#20243A] font-extrabold text-[11px] px-2 py-0.5 rounded-full border border-[#303044] shadow-[1px_1px_0px_#303044]">
-                ₹16k
-              </span>
-            </div>
-          </div>
-
-          <div className="flex justify-between text-[11px] font-bold text-[#77798A] mt-2 pt-2 border-t border-[#303044]/10">
-            <span>Apr 20</span>
-            <span>Apr 21</span>
-            <span>Apr 22</span>
-            <span>Apr 23</span>
-            <span>Apr 24</span>
-            <span>Apr 25</span>
-            <span>Apr 26</span>
-          </div>
-        </div>
-      </div>
-
-      {/* 3. BOTTOM SECTION: RECENT MESSAGES & NOTICES */}
-      <div className="rounded-2xl border-[1.5px] border-[#303044] p-5 sm:p-6 bg-white shadow-[2px_2px_0px_rgba(48,48,68,0.12)]">
-        <div className="flex items-center gap-2 mb-4">
-          <h2 className="text-base sm:text-lg font-extrabold text-[#20243A]">New Messages & Notices</h2>
-          <span className="w-5 h-5 rounded-full bg-rose-500 text-white font-bold text-xs flex items-center justify-center">
-            3
-          </span>
+        {/* 1. TOP 4 PASTEL STAT CARDS */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+          <StatCard
+            title="Bank balance"
+            value="₹2,46,428"
+            subtitle="Society Maintenance Reserve"
+            variant="yellow"
+            icon={<IndianRupee className="w-5 h-5 text-[#20243A]" />}
+          />
+          <StatCard
+            title="Current Maintenance Bill"
+            value={BillingService.formatPaiseToInr(currentInvoice.totalAmountPaise)}
+            subtitle={`Current Maintenance Bill (${currentInvoice.billingPeriodName})`}
+            variant="lavender"
+            icon={<Receipt className="w-5 h-5 text-[#20243A]" />}
+          />
+          <StatCard
+            title="Outstanding Balance"
+            value={BillingService.formatPaiseToInr(currentInvoice.balanceAmountPaise)}
+            subtitle={`Outstanding Balance: ${currentInvoice.balanceAmountPaise > 0 ? 'Pending Payment' : 'All Clear'}`}
+            variant="blue"
+            icon={<Wallet className="w-5 h-5 text-[#20243A]" />}
+          />
+          <StatCard
+            title="Domestic Staff"
+            value={workers.length.toString()}
+            subtitle={`${workers.filter((w) => w.isCurrentlyInside).length} Currently Inside Society`}
+            variant="mint"
+            icon={<Users className="w-5 h-5 text-[#20243A]" />}
+          />
         </div>
 
-        <div className="divide-y divide-[#303044]/10">
-          <div className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 hover:bg-slate-50/80 rounded-xl px-2 transition-colors">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full border border-[#303044] bg-[#FAF7A7] flex items-center justify-center font-bold text-xs text-[#20243A] shrink-0">
-                RP
-              </div>
-              <div>
-                <div className="font-extrabold text-sm text-[#20243A]">Rosa Palmour (Committee)</div>
-                <div className="text-xs text-[#77798A] font-medium line-clamp-1">
-                  AGM agenda and audited financial statements for FY 2025-26 are now available.
+        {/* 2. PERSONAL DASHBOARD INSIGHTS (FLAT SCOPED) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+          {/* Left Column (8 cols): Visitors, Complaints & Amenity Bookings */}
+          <div className="lg:col-span-8 space-y-5">
+            {/* Recent Gate Visitors */}
+            <div className="rounded-2xl border-[1.5px] border-[#303044] p-5 sm:p-6 bg-white shadow-[2px_2px_0px_#303044]">
+              <div className="flex items-center justify-between mb-4 pb-3 border-b border-[#303044]/10">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-[#20243A]" />
+                  <h2 className="text-base font-black text-[#20243A]">Recent Visitors for Flat {residentFlatNo}</h2>
                 </div>
+                <Link href="/resident/visitors" className="text-xs font-bold text-[#20243A] hover:underline">
+                  View All Log &rarr;
+                </Link>
+              </div>
+
+              <div className="divide-y divide-[#303044]/10">
+                {flatVisits.map((v) => (
+                  <div key={v.id} className="py-3 flex items-center justify-between text-xs">
+                    <div>
+                      <div className="font-bold text-[#20243A] text-sm">{v.visitor.fullName}</div>
+                      <div className="text-[#77798A] mt-0.5">
+                        {v.purpose} • {v.visitor.mobileNumber}
+                      </div>
+                    </div>
+                    <div className="text-right space-y-1">
+                      <span
+                        className={`inline-block px-2.5 py-0.5 rounded-full font-black text-[10px] border border-[#20243A] ${
+                          v.status === 'INSIDE'
+                            ? 'bg-[#C9F36B] text-[#20243A]'
+                            : v.status === 'COMPLETED'
+                            ? 'bg-[#C9F2DE] text-[#20243A]'
+                            : 'bg-[#FAF7A7] text-[#20243A]'
+                        }`}
+                      >
+                        {v.status}
+                      </span>
+                      <div className="text-[10px] text-[#77798A]">
+                        {v.entryTime ? new Date(v.entryTime).toLocaleTimeString('en-IN') : 'Expected'}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {flatVisits.length === 0 && (
+                  <p className="text-xs text-[#77798A] py-3">No recent visitors logged for your unit.</p>
+                )}
               </div>
             </div>
-            <div className="flex items-center gap-2 sm:self-center self-end">
-              <Badge variant="lavender">Committee</Badge>
-              <span className="text-xs font-semibold text-[#77798A]">2:34 pm</span>
+
+            {/* Active Amenity Reservations */}
+            <div className="rounded-2xl border-[1.5px] border-[#303044] p-5 sm:p-6 bg-white shadow-[2px_2px_0px_#303044]">
+              <div className="flex items-center justify-between mb-4 pb-3 border-b border-[#303044]/10">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-[#20243A]" />
+                  <h2 className="text-base font-black text-[#20243A]">My Facility Bookings</h2>
+                </div>
+                <span className="text-xs font-bold text-[#77798A]">Flat {residentFlatNo}</span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {flatBookings.map((b) => (
+                  <div
+                    key={b.id}
+                    className="p-3 bg-[#EAE5FA] border-[1.5px] border-[#303044] rounded-xl shadow-[1px_1px_0px_#303044] text-xs space-y-1"
+                  >
+                    <div className="flex items-center justify-between">
+                      <strong className="text-[#20243A] font-black">{b.amenityName}</strong>
+                      <span className="px-2 py-0.5 rounded-full bg-[#C9F36B] border border-[#20243A] font-black text-[10px]">
+                        {b.status}
+                      </span>
+                    </div>
+                    <div className="text-[#77798A] font-semibold">
+                      Date: {b.bookingDate} • {b.slot}
+                    </div>
+                    <div className="text-[#20243A] font-bold">
+                      Fee: {BillingService.formatPaiseToInr(b.feePaise)}
+                    </div>
+                  </div>
+                ))}
+                {flatBookings.length === 0 && (
+                  <p className="text-xs text-[#77798A] col-span-2 py-2">
+                    No active amenity bookings. You can reserve the Clubhouse, Badminton court, or Pool.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Payment History Log */}
+            <div className="rounded-2xl border-[1.5px] border-[#303044] p-5 sm:p-6 bg-white shadow-[2px_2px_0px_#303044]">
+              <div className="flex items-center justify-between mb-3 pb-3 border-b border-[#303044]/10">
+                <div className="flex items-center gap-2">
+                  <Receipt className="w-4 h-4 text-[#20243A]" />
+                  <h2 className="text-base font-black text-[#20243A]">Maintenance Payment Receipts</h2>
+                </div>
+                <Link href="/resident/billing" className="text-xs font-bold text-[#20243A] hover:underline">
+                  Billing Hub &rarr;
+                </Link>
+              </div>
+
+              <div className="space-y-2">
+                {payments.slice(0, 2).map((p) => (
+                  <div
+                    key={p.id}
+                    className="flex items-center justify-between p-2.5 bg-white border border-[#303044] rounded-xl text-xs"
+                  >
+                    <div>
+                      <div className="font-bold text-[#20243A]">
+                        {BillingService.formatPaiseToInr(p.amountPaise)} ({p.paymentMethod})
+                      </div>
+                      <div className="text-[11px] text-[#77798A]">
+                        Receipt #{p.receiptNumber} • {new Date(p.paymentDate).toLocaleDateString('en-IN')}
+                      </div>
+                    </div>
+                    <Badge variant="green">{p.status}</Badge>
+                  </div>
+                ))}
+                {payments.length === 0 && (
+                  <p className="text-xs text-[#77798A]">No prior payments recorded for this flat.</p>
+                )}
+              </div>
             </div>
           </div>
 
-          <div className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 hover:bg-slate-50/80 rounded-xl px-2 transition-colors">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full border border-[#303044] bg-[#C9F2DE] flex items-center justify-center font-bold text-xs text-[#20243A] shrink-0">
-                SG
+          {/* Right Column (4 cols): Domestic Staff & Announcements */}
+          <div className="lg:col-span-4 space-y-5">
+            {/* Domestic Help On Duty */}
+            <div className="rounded-2xl border-[1.5px] border-[#303044] p-5 bg-white shadow-[2px_2px_0px_#303044] space-y-3">
+              <div className="flex items-center justify-between pb-2 border-b border-[#303044]/10">
+                <h2 className="text-sm font-black text-[#20243A] flex items-center gap-2">
+                  <Users className="w-4 h-4" />
+                  Household Staff Status
+                </h2>
+                <Link href="/resident/directory" className="text-[11px] font-bold text-[#20243A] hover:underline">
+                  Directory &rarr;
+                </Link>
               </div>
-              <div>
-                <div className="font-extrabold text-sm text-[#20243A]">Security Gate (Gate 1)</div>
-                <div className="text-xs text-[#77798A] font-medium line-clamp-1">
-                  Visitor courier package from Amazon received and held at Gate 1 security desk.
-                </div>
+
+              <div className="space-y-2.5">
+                {workers.map((w) => (
+                  <div
+                    key={w.id}
+                    className="p-3 rounded-xl border border-[#303044] bg-[#EAE5FA] flex items-center justify-between text-xs"
+                  >
+                    <div>
+                      <div className="font-bold text-[#20243A]">{w.fullName}</div>
+                      <div className="text-[11px] text-[#77798A] font-semibold">{w.serviceType}</div>
+                    </div>
+                    <span
+                      className={`px-2 py-0.5 rounded-full font-black text-[10px] border border-[#20243A] ${
+                        w.isCurrentlyInside
+                          ? 'bg-[#C9F36B] text-[#20243A]'
+                          : 'bg-white text-[#77798A]'
+                      }`}
+                    >
+                      {w.isCurrentlyInside ? 'Inside Society' : 'Not In Society'}
+                    </span>
+                  </div>
+                ))}
+                {workers.length === 0 && (
+                  <p className="text-xs text-[#77798A]">No domestic workers assigned to your flat.</p>
+                )}
               </div>
             </div>
-            <div className="flex items-center gap-2 sm:self-center self-end">
-              <Badge variant="green">Security</Badge>
-              <span className="text-xs font-semibold text-[#77798A]">1:15 pm</span>
+
+            {/* Society Announcements & Circulars */}
+            <div className="rounded-2xl border-[1.5px] border-[#303044] p-5 bg-[#FAF7A7] shadow-[2px_2px_0px_#303044] space-y-3">
+              <div className="flex items-center gap-2 pb-2 border-b border-[#303044]/20">
+                <BellRing className="w-4 h-4 text-[#20243A]" />
+                <h2 className="text-sm font-black text-[#20243A]">Society Notices &amp; Circulars</h2>
+              </div>
+
+              <div className="space-y-3">
+                {announcements.map((a) => (
+                  <div
+                    key={a.id}
+                    className="p-3 bg-white border border-[#303044] rounded-xl shadow-[1px_1px_0px_#303044] space-y-1 text-xs"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-black text-[#20243A] line-clamp-1">{a.title}</span>
+                      {a.priority === 'URGENT' && (
+                        <span className="px-1.5 py-0.2 rounded bg-red-100 text-red-800 font-black text-[9px] border border-red-400">
+                          URGENT
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-[#77798A] font-medium leading-relaxed line-clamp-2">
+                      {a.content}
+                    </p>
+                    <div className="text-[10px] text-[#77798A] font-bold pt-1">
+                      By {a.authorName} • {new Date(a.publishedAt).toLocaleDateString('en-IN')}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
