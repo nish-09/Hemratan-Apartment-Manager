@@ -9,8 +9,12 @@ import { GET as getInvoicePdfHandler } from './invoices/[id]/pdf/route';
 import { POST as offlinePaymentHandler } from '../payments/offline/route';
 import { POST as webhookHandler } from '../payments/webhook/route';
 import { GET as listReceiptsHandler } from '../receipts/route';
+import { GET as getReceiptHandler } from '../receipts/[id]/route';
 import { GET as listExpensesHandler, POST as createExpenseHandler } from '../expenses/route';
+import { GET as getExpenseHandler, PATCH as updateExpenseHandler } from '../expenses/[id]/route';
 import { POST as approveExpenseHandler } from '../expenses/[id]/approve/route';
+import { POST as verifyPaymentHandler } from '../payments/[id]/verify/route';
+import { POST as refundPaymentHandler } from '../payments/[id]/refund/route';
 import { GET as financeSummaryHandler } from '../finance/summary/route';
 import { POST as disputeHandler } from './disputes/route';
 import { createSessionToken, SESSION_COOKIE_NAME } from '@/lib/auth/session';
@@ -535,4 +539,240 @@ describe('Financial Accounting & Billing REST APIs', () => {
       expect(otherDisputeRes.status).toBe(403);
     });
   });
+
+  describe('Individual Receipts, Offline Payment Verification, Refund, and Expense Modification APIs', () => {
+    it('allows resident to fetch own receipt and denies cross-flat receipt access', async () => {
+      // 1. Generate an invoice for Flat A-402
+      const invoice = BillingService.generateInvoice({
+        flatId: 'flat-a-402',
+        flatNumber: '402',
+        wing: 'A',
+        areaSqFt: 1100,
+        billingPeriodId: 'bp-2026-11',
+      });
+
+      // 2. Pay invoice to generate receipt
+      const paymentRes = BillingService.recordPayment({
+        invoiceId: invoice.id,
+        amountPaise: invoice.totalAmountPaise,
+        paymentMethod: 'ONLINE_GATEWAY',
+        payerProfileId: 'usr-res-001',
+      });
+      const receiptId = paymentRes.receipt!.id;
+
+      // 3. Resident accesses own receipt -> 200 OK
+      const getOwnReceiptReq = new NextRequest(`http://localhost:3000/api/receipts/${receiptId}`);
+      const ownRes = await getReceiptHandler(getOwnReceiptReq, {
+        params: Promise.resolve({ id: receiptId }),
+      });
+      // Need session cookie!
+      const getOwnWithCookie = new NextRequest(`http://localhost:3000/api/receipts/${receiptId}`, {
+        headers: { cookie: `${SESSION_COOKIE_NAME}=${residentToken}` },
+      });
+      const resOk = await getReceiptHandler(getOwnWithCookie, {
+        params: Promise.resolve({ id: receiptId }),
+      });
+      expect(resOk.status).toBe(200);
+      const data = await resOk.json();
+      expect(data.receipt.flatNumber).toBe('402');
+
+      // 4. Resident attempts to access another flat's receipt -> 403 Forbidden
+      const otherInvoice = BillingService.generateInvoice({
+        flatId: 'flat-b-102',
+        flatNumber: '102',
+        wing: 'B',
+        areaSqFt: 850,
+        billingPeriodId: 'bp-2026-11',
+      });
+      const otherPaymentRes = BillingService.recordPayment({
+        invoiceId: otherInvoice.id,
+        amountPaise: otherInvoice.totalAmountPaise,
+        paymentMethod: 'ONLINE_GATEWAY',
+      });
+      const otherReceiptId = otherPaymentRes.receipt!.id;
+
+      const crossReq = new NextRequest(`http://localhost:3000/api/receipts/${otherReceiptId}`, {
+        headers: { cookie: `${SESSION_COOKIE_NAME}=${residentToken}` },
+      });
+      const crossRes = await getReceiptHandler(crossReq, {
+        params: Promise.resolve({ id: otherReceiptId }),
+      });
+      expect(crossRes.status).toBe(403);
+    });
+
+    it('allows committee to verify pending offline payment and updates balance', async () => {
+      // 1. Generate invoice
+      const invoice = BillingService.generateInvoice({
+        flatId: 'flat-a-402',
+        flatNumber: '402',
+        wing: 'A',
+        areaSqFt: 1100,
+        billingPeriodId: 'bp-2026-11',
+      });
+
+      // 2. Record offline cash payment (pending verification)
+      const offlinePay = BillingService.recordPayment({
+        invoiceId: invoice.id,
+        amountPaise: 200000,
+        paymentMethod: 'CASH',
+        notes: 'Handed at society office counter',
+      });
+      expect(offlinePay.payment.status).toBe('PENDING');
+
+      // 3. Resident cannot verify payment (403 Forbidden)
+      const residentVerifyReq = new NextRequest(
+        `http://localhost:3000/api/payments/${offlinePay.payment.id}/verify`,
+        {
+          method: 'POST',
+          headers: { cookie: `${SESSION_COOKIE_NAME}=${residentToken}` },
+        }
+      );
+      const resForbidden = await verifyPaymentHandler(residentVerifyReq, {
+        params: Promise.resolve({ id: offlinePay.payment.id }),
+      });
+      expect(resForbidden.status).toBe(403);
+
+      // 4. Committee verifies payment -> 200 OK, transitions to SUCCESS
+      const commVerifyReq = new NextRequest(
+        `http://localhost:3000/api/payments/${offlinePay.payment.id}/verify`,
+        {
+          method: 'POST',
+          headers: { cookie: `${SESSION_COOKIE_NAME}=${committeeToken}` },
+        }
+      );
+      const commRes = await verifyPaymentHandler(commVerifyReq, {
+        params: Promise.resolve({ id: offlinePay.payment.id }),
+      });
+      expect(commRes.status).toBe(200);
+      const commData = await commRes.json();
+      expect(commData.payment.status).toBe('SUCCESS');
+      expect(commData.payment.verifiedByProfileId).toBeDefined();
+
+      // Check invoice balance was updated
+      const updatedInvoice = BillingService.getInvoiceById(invoice.id)!;
+      expect(updatedInvoice.paidAmountPaise).toBe(200000);
+    });
+
+    it('allows committee to process authorized payment refund and updates ledger', async () => {
+      // 1. Invoice & full payment
+      const invoice = BillingService.generateInvoice({
+        flatId: 'flat-a-402',
+        flatNumber: '402',
+        wing: 'A',
+        areaSqFt: 1100,
+        billingPeriodId: 'bp-2026-11',
+      });
+      const paymentRes = BillingService.recordPayment({
+        invoiceId: invoice.id,
+        amountPaise: invoice.totalAmountPaise,
+        paymentMethod: 'ONLINE_GATEWAY',
+      });
+      expect(invoice.status).toBe('PAID');
+
+      // 2. Resident cannot trigger refund (403 Forbidden)
+      const resRefundReq = new NextRequest(
+        `http://localhost:3000/api/payments/${paymentRes.payment.id}/refund`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            cookie: `${SESSION_COOKIE_NAME}=${residentToken}`,
+          },
+          body: JSON.stringify({ reason: 'Accidental double payment' }),
+        }
+      );
+      const resForbidden = await refundPaymentHandler(resRefundReq, {
+        params: Promise.resolve({ id: paymentRes.payment.id }),
+      });
+      expect(resForbidden.status).toBe(403);
+
+      // 3. Committee processes refund -> 200 OK
+      const commRefundReq = new NextRequest(
+        `http://localhost:3000/api/payments/${paymentRes.payment.id}/refund`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            cookie: `${SESSION_COOKIE_NAME}=${committeeToken}`,
+          },
+          body: JSON.stringify({
+            refundAmountPaise: 100000,
+            reason: 'Partial adjustment requested and authorized by AGM',
+          }),
+        }
+      );
+      const commRes = await refundPaymentHandler(commRefundReq, {
+        params: Promise.resolve({ id: paymentRes.payment.id }),
+      });
+      expect(commRes.status).toBe(200);
+      const refundData = await commRes.json();
+      expect(refundData.payment.status).toBe('PARTIALLY_REFUNDED');
+      expect(refundData.invoice.status).toBe('PARTIALLY_PAID');
+      expect(refundData.refundRecord.amountPaise).toBe(-100000);
+    });
+
+    it('allows committee to fetch and update draft/submitted expenses and rejects editing approved expenses', async () => {
+      // 1. Create a submitted expense
+      const expense = ExpenseService.recordExpense({
+        title: 'Garden Sprinkler System Repair',
+        category: 'GARDENING',
+        vendorName: 'Greenery Landscaping',
+        description: 'Fix leak in Zone 2 sprinkler pipe.',
+        amountPaise: 450000,
+        expenseDate: '2026-11-02',
+        enteredByProfileId: 'usr-comm-002',
+      });
+
+      // 2. Committee fetches expense by ID -> 200 OK
+      const getReq = new NextRequest(`http://localhost:3000/api/expenses/${expense.id}`, {
+        headers: { cookie: `${SESSION_COOKIE_NAME}=${committeeToken}` },
+      });
+      const getRes = await getExpenseHandler(getReq, {
+        params: Promise.resolve({ id: expense.id }),
+      });
+      expect(getRes.status).toBe(200);
+      const getData = await getRes.json();
+      expect(getData.expense.title).toBe('Garden Sprinkler System Repair');
+
+      // 3. Committee updates draft/submitted expense -> 200 OK
+      const patchReq = new NextRequest(`http://localhost:3000/api/expenses/${expense.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          cookie: `${SESSION_COOKIE_NAME}=${committeeToken}`,
+        },
+        body: JSON.stringify({
+          amountPaise: 500000,
+          description: 'Updated with brass valve replacement.',
+        }),
+      });
+      const patchRes = await updateExpenseHandler(patchReq, {
+        params: Promise.resolve({ id: expense.id }),
+      });
+      expect(patchRes.status).toBe(200);
+      const patchData = await patchRes.json();
+      expect(patchData.expense.amountPaise).toBe(500000);
+
+      // 4. Approve expense
+      ExpenseService.approveExpense({
+        expenseId: expense.id,
+        approverProfileId: 'usr-admin-001',
+      });
+
+      // 5. Attempt to edit approved expense -> 400 Bad Request
+      const patchApprovedReq = new NextRequest(`http://localhost:3000/api/expenses/${expense.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          cookie: `${SESSION_COOKIE_NAME}=${committeeToken}`,
+        },
+        body: JSON.stringify({ amountPaise: 600000 }),
+      });
+      const patchApprovedRes = await updateExpenseHandler(patchApprovedReq, {
+        params: Promise.resolve({ id: expense.id }),
+      });
+      expect(patchApprovedRes.status).toBe(400);
+    });
+  });
 });
+

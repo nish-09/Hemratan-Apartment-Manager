@@ -242,6 +242,73 @@ export class ExpenseService {
   }
 
   /**
+   * Get Single Expense by ID
+   */
+  static getExpenseById(id: string): SocietyExpense | undefined {
+    return expensesStore.find((e) => e.id === id || e.expenseNumber === id);
+  }
+
+  /**
+   * Update an Eligible Expense (Only DRAFT or SUBMITTED status can be edited)
+   */
+  static updateExpense(input: {
+    expenseId: string;
+    title?: string;
+    category?: ExpenseCategory;
+    vendorName?: string;
+    description?: string;
+    amountPaise?: number;
+    expenseDate?: string;
+    invoiceReference?: string;
+    paymentMethod?: string;
+    attachmentPath?: string;
+    updatedByProfileId: string;
+  }): SocietyExpense {
+    const expense = expensesStore.find((e) => e.id === input.expenseId);
+    if (!expense) {
+      throw new Error(`Expense "${input.expenseId}" not found.`);
+    }
+
+    if (expense.status === 'APPROVED' || expense.status === 'PAID') {
+      throw new Error(`Cannot edit expense with status "${expense.status}". Only DRAFT or SUBMITTED expenses can be modified.`);
+    }
+
+    if (input.title !== undefined) {
+      if (input.title.trim().length < 3) throw new Error('Expense title must be at least 3 characters.');
+      expense.title = input.title.trim();
+    }
+    if (input.vendorName !== undefined) {
+      if (input.vendorName.trim().length < 2) throw new Error('Vendor name is required.');
+      expense.vendorName = input.vendorName.trim();
+    }
+    if (input.description !== undefined) {
+      expense.description = input.description.trim();
+    }
+    if (input.amountPaise !== undefined) {
+      if (input.amountPaise <= 0) throw new Error('Expense amount must be greater than zero paise.');
+      expense.amountPaise = Math.round(input.amountPaise);
+    }
+    if (input.category !== undefined) {
+      expense.category = input.category;
+    }
+    if (input.expenseDate !== undefined) {
+      expense.expenseDate = input.expenseDate;
+    }
+    if (input.invoiceReference !== undefined) {
+      expense.invoiceReference = input.invoiceReference;
+    }
+    if (input.paymentMethod !== undefined) {
+      expense.paymentMethod = input.paymentMethod;
+    }
+    if (input.attachmentPath !== undefined) {
+      expense.attachmentPath = input.attachmentPath;
+    }
+
+    expense.updatedAt = new Date().toISOString();
+    return expense;
+  }
+
+  /**
    * List Expenses with Filters
    */
   static listExpenses(filters?: {

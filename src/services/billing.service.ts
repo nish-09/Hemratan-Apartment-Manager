@@ -835,6 +835,99 @@ export class BillingService {
   }
 
   /**
+   * Get Single Receipt by ID or Receipt Number
+   */
+  static getReceiptById(id: string): PaymentReceipt | undefined {
+    return receiptsStore.find((r) => r.id === id || r.receiptNumber === id);
+  }
+
+  /**
+   * Get Single Payment Record by ID or Payment Reference
+   */
+  static getPaymentById(id: string): PaymentRecord | undefined {
+    return paymentsStore.find((p) => p.id === id || p.paymentReferenceNo === id);
+  }
+
+  /**
+   * Process Authorized Refund for a Payment
+   * Deducts refunded amount from invoice, re-derives invoice status, and records an adjustment ledger record.
+   */
+  static refundPayment(input: {
+    paymentId: string;
+    refundAmountPaise?: number;
+    reason: string;
+    processedByProfileId: string;
+  }): { payment: PaymentRecord; invoice: MaintenanceInvoice; refundRecord: PaymentRecord } {
+    const payment = paymentsStore.find((p) => p.id === input.paymentId);
+    if (!payment) {
+      throw new Error(`Payment "${input.paymentId}" not found.`);
+    }
+
+    if (payment.status !== 'SUCCESS' && payment.status !== 'PARTIALLY_REFUNDED') {
+      throw new Error(`Cannot refund payment with status "${payment.status}". Only SUCCESS or PARTIALLY_REFUNDED payments can be refunded.`);
+    }
+
+    if (!input.reason || input.reason.trim().length < 5) {
+      throw new Error('A detailed reason is mandatory for processing a refund.');
+    }
+
+    const invoice = invoicesStore.find((inv) => inv.id === payment.invoiceId);
+    if (!invoice) {
+      throw new Error(`Associated invoice for payment "${input.paymentId}" not found.`);
+    }
+
+    const refundAmount = input.refundAmountPaise !== undefined ? input.refundAmountPaise : payment.amountPaise;
+    if (refundAmount <= 0) {
+      throw new Error('Refund amount must be greater than zero paise.');
+    }
+    if (refundAmount > payment.amountPaise) {
+      throw new Error(`Refund amount ${this.formatPaiseToInr(refundAmount)} cannot exceed payment amount of ${this.formatPaiseToInr(payment.amountPaise)}.`);
+    }
+
+    const now = new Date().toISOString();
+    const isFullRefund = refundAmount === payment.amountPaise;
+    payment.status = isFullRefund ? 'REFUNDED' : 'PARTIALLY_REFUNDED';
+
+    // Update invoice ledger
+    invoice.paidAmountPaise = Math.max(0, invoice.paidAmountPaise - refundAmount);
+    invoice.outstandingBalancePaise = Math.max(0, invoice.totalAmountPaise - invoice.paidAmountPaise);
+
+    if (invoice.outstandingBalancePaise === 0) {
+      invoice.status = 'PAID';
+    } else if (invoice.paidAmountPaise > 0) {
+      invoice.status = 'PARTIALLY_PAID';
+    } else {
+      const isPastDue = new Date() > new Date(invoice.dueDate);
+      invoice.status = isPastDue ? 'OVERDUE' : 'GENERATED';
+    }
+    invoice.updatedAt = now;
+
+    // Create an immutable reversal / adjustment record
+    const refundRef = `REF-${Date.now().toString().slice(-6)}-${Math.random().toString(36).substring(2, 5).toUpperCase()}`;
+    const refundRecord: PaymentRecord = {
+      id: `pay-ref-${Date.now()}`,
+      paymentReferenceNo: refundRef,
+      invoiceId: invoice.id,
+      flatId: invoice.flatId,
+      payerProfileId: payment.payerProfileId,
+      amountPaise: -refundAmount,
+      paymentMethod: payment.paymentMethod,
+      paymentChannel: 'REFUND_REVERSAL',
+      providerOrderId: payment.providerOrderId,
+      providerPaymentId: payment.providerPaymentId,
+      status: 'REFUNDED',
+      transactionTimestamp: now,
+      verifiedByProfileId: input.processedByProfileId,
+      verifiedAt: now,
+      notes: `Refund for ${payment.paymentReferenceNo}: ${input.reason.trim()}`,
+      createdAt: now,
+    };
+    paymentsStore.unshift(refundRecord);
+
+    return { payment, invoice, refundRecord };
+  }
+
+  /**
    * Raise a Billing Dispute by Resident
    */
   static raiseDispute(input: {
