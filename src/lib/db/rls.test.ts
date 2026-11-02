@@ -147,6 +147,40 @@ describe('Database Row-Level Security (RLS) & Access Policy Audit', () => {
     expect(migration006Sql).toContain('Authenticated users can view active verified directory');
   });
 
+  it('verifies RLS is enabled on all financial accounting tables in migration 007', () => {
+    const migration007Path = path.resolve(import.meta.dirname, '../../../supabase/migrations/20261102000007_financial_accounting.sql');
+    const migration007Sql = fs.readFileSync(migration007Path, 'utf8');
+
+    const stage6Tables = [
+      'billing_configurations',
+      'billing_periods',
+      'billing_batches',
+      'invoices',
+      'invoice_line_items',
+      'invoice_adjustments',
+      'payments',
+      'payment_provider_orders',
+      'payment_webhook_events',
+      'payment_receipts',
+      'expenses',
+      'expense_attachments',
+      'expense_approvals',
+      'billing_disputes',
+      'financial_audit_logs',
+    ];
+
+    for (const table of stage6Tables) {
+      expect(migration007Sql).toContain(`ALTER TABLE public.${table} ENABLE ROW LEVEL SECURITY;`);
+    }
+    expect(migration007Sql).toContain('Committee & Super Admin full billing access');
+    expect(migration007Sql).toContain('Residents view own flat invoices only');
+    expect(migration007Sql).toContain('Residents view own flat invoice line items');
+    expect(migration007Sql).toContain('Residents view own flat payments');
+    expect(migration007Sql).toContain('Residents view own flat receipts');
+    expect(migration007Sql).toContain('Residents manage own billing disputes');
+    expect(migration007Sql).toContain('Committee & Super Admin full expense access');
+  });
+
   it('grants Super Admin full platform governance', () => {
     const superAdminRole: UserRole = 'SUPER_ADMIN';
     expect(hasPermission(superAdminRole, PERMISSIONS.USERS_MANAGE)).toBe(true);
