@@ -1,7 +1,7 @@
-﻿import { describe, it, expect } from 'vitest';
-import { validateEnv } from './env';
+﻿import { describe, it, expect, vi } from 'vitest';
+import { validateEnv, getServerSecret } from './env';
 
-describe('Environment Validation', () => {
+describe('Environment Validation & Secret Handling', () => {
   it('should validate with default values when empty env is supplied', () => {
     const config = validateEnv({});
     expect(config.APP_URL).toBe('http://localhost:3000');
@@ -28,5 +28,19 @@ describe('Environment Validation', () => {
         APP_URL: 'not-a-valid-url',
       })
     ).toThrow();
+  });
+
+  it('should retrieve server secret in server-side context', () => {
+    const secret = getServerSecret('SUPABASE_SERVICE_ROLE_KEY');
+    expect(secret).toBeDefined();
+  });
+
+  it('should throw security error if server secret is accessed in window context', () => {
+    vi.stubGlobal('window', {});
+    try {
+      expect(() => getServerSecret('SUPABASE_SERVICE_ROLE_KEY')).toThrow(/SECURITY ALERT/);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });
