@@ -45,6 +45,26 @@ describe('Database Row-Level Security (RLS) & Access Policy Audit', () => {
     expect(migration003Sql).toContain('Residents can view visits for own flats');
   });
 
+  it('verifies RLS is enabled on all parking and delivery management tables in migration 004', () => {
+    const migration004Path = path.resolve(import.meta.dirname, '../../../supabase/migrations/20261102000004_parking_and_deliveries.sql');
+    const migration004Sql = fs.readFileSync(migration004Path, 'utf8');
+
+    const stage3Tables = [
+      'parking_spaces',
+      'parking_allocations',
+      'parking_audit_logs',
+      'deliveries',
+      'delivery_status_history',
+      'delivery_notifications',
+    ];
+
+    for (const table of stage3Tables) {
+      expect(migration004Sql).toContain(`ALTER TABLE public.${table} ENABLE ROW LEVEL SECURITY;`);
+    }
+    expect(migration004Sql).toContain('Residents can view deliveries for own flat');
+    expect(migration004Sql).toContain('Guards can manage parking allocations');
+  });
+
   it('verifies SECURITY DEFINER functions enforce safe search_path and revoke public execution', () => {
     expect(migrationSql).toContain('SET search_path = public, pg_temp');
     expect(migrationSql).toContain('REVOKE EXECUTE ON FUNCTION public.current_user_role() FROM PUBLIC;');
