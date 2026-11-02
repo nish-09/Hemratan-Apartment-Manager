@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     const status = url.searchParams.get('status') as InvoiceStatus | null;
     const periodId = url.searchParams.get('periodId') || undefined;
 
-    let flatIdParam = url.searchParams.get('flatId') || undefined;
+    const flatIdParam = url.searchParams.get('flatId') || undefined;
 
     // Strict Flat Isolation: Residents can ONLY view their own authorized flat invoices
     if (user.role === 'RESIDENT') {

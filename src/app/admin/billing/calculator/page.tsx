@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { AppShell } from '@/components/layout/app-shell';
+import { CalculationSnapshot } from '@/services/billing.service';
 import {
   Calculator,
   Save,
@@ -43,59 +44,56 @@ export default function MaintenanceCalculatorPage() {
   const [discountCreditsRupees, setDiscountCreditsRupees] = useState<number>(0);
 
   // Live calculation results
-  const [calculation, setCalculation] = useState<any>(null);
+  const [calculation, setCalculation] = useState<CalculationSnapshot | null>(null);
   const [loading, setLoading] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState('');
 
   useEffect(() => {
-    runCalculation();
+    let ignore = false;
+    async function calculate() {
+      try {
+        const items = additionalItems.map((item) => ({
+          description: item.description,
+          amountPaise: Math.round(item.amountRupees * 100),
+          category: item.category,
+          taxApplicable: item.taxApplicable,
+        }));
+
+        const res = await fetch('/api/billing/calculate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            flatAreaSqFt,
+            additionalCharges: items,
+            adjustmentsPaise: Math.round(adjustmentsRupees * 100),
+            previousOutstandingPaise: Math.round(previousOutstandingRupees * 100),
+            discountCreditsPaise: Math.round(discountCreditsRupees * 100),
+            gstHandling,
+            manualGstPercentage: gstPercentage,
+          }),
+        });
+
+        if (res.ok && !ignore) {
+          const data = await res.json();
+          setCalculation(data.calculation);
+        }
+      } catch (err) {
+        console.error('Calculation error:', err);
+      }
+    }
+    calculate();
+    return () => {
+      ignore = true;
+    };
   }, [
-    billingModel,
-    fixedChargeRupees,
-    ratePerSqFtRupees,
     flatAreaSqFt,
     additionalItems,
-    gstHandling,
-    gstPercentage,
     adjustmentsRupees,
     previousOutstandingRupees,
     discountCreditsRupees,
+    gstHandling,
+    gstPercentage,
   ]);
-
-  async function runCalculation() {
-    setLoading(true);
-    try {
-      const items = additionalItems.map((item) => ({
-        description: item.description,
-        amountPaise: Math.round(item.amountRupees * 100),
-        category: item.category,
-        taxApplicable: item.taxApplicable,
-      }));
-
-      const res = await fetch('/api/billing/calculate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          flatAreaSqFt,
-          additionalCharges: items,
-          adjustmentsPaise: Math.round(adjustmentsRupees * 100),
-          previousOutstandingPaise: Math.round(previousOutstandingRupees * 100),
-          discountCreditsPaise: Math.round(discountCreditsRupees * 100),
-          gstHandling,
-          manualGstPercentage: gstPercentage,
-        }),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setCalculation(data.calculation);
-      }
-    } catch (err) {
-      console.error('Calculation error:', err);
-    } finally {
-      setLoading(false);
-    }
-  }
 
   function handleAddCharge() {
     setAdditionalItems([

@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
     const resolvedArea = data.areaSqFt ?? data.flatAreaSqFt ?? 1000;
     const resolvedItems = data.additionalItems ?? data.additionalCharges ?? [];
 
-    let config = { ...BillingService.getBillingConfiguration() };
+    const config = { ...BillingService.getBillingConfiguration() };
     if (data.gstHandling) {
       config.gstHandling = data.gstHandling;
     }

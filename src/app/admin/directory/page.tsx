@@ -449,7 +449,7 @@ export default function CommitteeDirectoryGovernancePage() {
               <div>
                 <h2 className="text-lg font-black text-[#303044]">Resident Contact Unmasking Audit Register</h2>
                 <p className="text-xs font-semibold text-gray-500">
-                  Immutable audit records captured whenever a resident requests to unlock a service worker's contact number.
+                  Immutable audit records captured whenever a resident requests to unlock a service worker&apos;s contact number.
                 </p>
               </div>
             </div>

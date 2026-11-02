@@ -611,7 +611,7 @@ export default function CommitteeComplaintsPage() {
           <div className="bg-white rounded-2xl border-[2px] border-[#303044] p-5 max-w-md w-full shadow-[6px_6px_0px_#303044]">
             <h3 className="font-black text-lg text-[#20243A] mb-1">Confirm Official Society ETA</h3>
             <p className="text-xs text-[#77798A] mb-3">
-              This timeline will be officially committed and displayed in the resident's dashboard
+              This timeline will be officially committed and displayed in the resident&apos;s dashboard
             </p>
             <form onSubmit={handleConfirmEta} className="space-y-3">
               <div>

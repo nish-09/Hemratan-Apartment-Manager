@@ -1,4 +1,4 @@
-﻿export interface FlatRecord {
+export interface FlatRecord {
   id: string;
   wing: string;
   flatNumber: string;
@@ -15,7 +15,7 @@
 }
 
 // In-memory persistent society flats store with mock seed for 100 flats
-let flatsStore: FlatRecord[] = [
+const flatsStore: FlatRecord[] = [
   {
     id: 'flat-a-101',
     wing: 'A',

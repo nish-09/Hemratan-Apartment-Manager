@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
 
     const url = new URL(request.url);
     const invoiceId = url.searchParams.get('invoiceId') || undefined;
-    let flatIdParam = url.searchParams.get('flatId') || undefined;
+    const flatIdParam = url.searchParams.get('flatId') || undefined;
 
     if (user.role === 'RESIDENT') {
       const userFlats = user.assignedFlatIds || [];
