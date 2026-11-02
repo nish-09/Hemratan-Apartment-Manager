@@ -1,0 +1,63 @@
+﻿@import "tailwindcss";
+
+@layer base {
+  :root {
+    --app-bg: #EAE5FA;
+    --sidebar-bg: #C9F36B;
+    --sidebar-border: #303044;
+    --surface: #FFFFFF;
+    --text-primary: #20243A;
+    --text-secondary: #77798A;
+    --accent-mint: #C9F2DE;
+    --accent-lavender: #DCD2FA;
+    --accent-soft-purple: #BCA9F2;
+    --border-navy: #303044;
+
+    /* Stat card pastels */
+    --card-yellow: #FAF7A7;
+    --card-blue: #E2E8F8;
+    --card-mint: #C9F2DE;
+    --card-lavender: #E6DEFC;
+    --card-peach: #FCE1D8;
+    --panel-lime: #E5FAA8;
+  }
+
+  body {
+    background-color: var(--app-bg);
+    color: var(--text-primary);
+    font-family: var(--font-manrope), system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* Custom Neo-Brutalist Border & Shadow Utilities */
+.neo-border {
+  border: 1.5px solid var(--border-navy);
+}
+
+.neo-border-sm {
+  border: 1px solid var(--border-navy);
+}
+
+.neo-card {
+  background-color: #ffffff;
+  border: 1.5px solid var(--border-navy);
+  border-radius: 1.25rem;
+  box-shadow: 2px 2px 0px rgba(48, 48, 68, 0.15);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.neo-card-interactive:hover {
+  transform: translateY(-2px);
+  box-shadow: 3px 4px 0px rgba(48, 48, 68, 0.2);
+}
+
+.neo-pill {
+  border: 1px solid var(--border-navy);
+  border-radius: 9999px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
