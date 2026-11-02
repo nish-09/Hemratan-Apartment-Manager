@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState } from 'react';
 import { AppShell } from '@/components/layout/app-shell';
@@ -15,6 +15,8 @@ import {
   ArrowRight,
   TrendingUp,
   FileText,
+  Car,
+  Package,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -65,6 +67,12 @@ export default function CommitteeDashboard() {
           <span className="text-xs font-bold text-[#77798A]">FY 2026-27 • Operations Ledger</span>
         </div>
         <div className="flex items-center gap-2">
+          <Link href="/admin/parking">
+            <Button variant="outline" size="sm" className="gap-1.5 font-bold bg-[#FAF7A7]">
+              <Car className="w-3.5 h-3.5 text-[#20243A]" />
+              <span>Parking & Deliveries</span>
+            </Button>
+          </Link>
           <Link href="/admin/billing">
             <Button variant="lime" size="sm" className="gap-1.5 font-bold">
               <FileText className="w-3.5 h-3.5" />

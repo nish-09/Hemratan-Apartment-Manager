@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState } from 'react';
 import Link from 'next/link';
@@ -21,6 +21,7 @@ import {
   Menu,
   X,
   Users,
+  Package,
 } from 'lucide-react';
 import { UserRole } from '@/types/roles';
 
@@ -38,19 +39,20 @@ const ROLE_NAV_ITEMS: Record<UserRole, Array<{ label: string; href: string; icon
     { label: 'Visitors', href: '/resident/visitors', icon: ShieldCheck },
     { label: 'Complaints', href: '/resident/complaints', icon: ClipboardList },
     { label: 'Maintenance & Bills', href: '/resident/bills', icon: Wallet },
-    { label: 'Parking & Deliveries', href: '/resident/parking', icon: Car },
+    { label: 'Deliveries & Parking', href: '/resident/deliveries', icon: Package },
     { label: 'Rules & Directory', href: '/resident/rules', icon: BookOpen },
   ],
   GUARD: [
     { label: 'Gate Control', href: '/guard/dashboard', icon: ShieldCheck },
     { label: 'Visitor Logs', href: '/guard/visitors', icon: Users },
-    { label: 'Delivery Intake', href: '/guard/deliveries', icon: Car },
+    { label: 'Delivery Intake', href: '/guard/deliveries', icon: Package },
+    { label: 'Parking Slots', href: '/guard/parking', icon: Car },
     { label: 'Staff Attendance', href: '/guard/staff', icon: ClipboardList },
-    { label: 'Parking Slots', href: '/guard/parking', icon: Home },
   ],
   COMMITTEE: [
     { label: 'Operations Cockpit', href: '/admin/dashboard', icon: Home },
     { label: 'Flats & Members', href: '/admin/flats', icon: Users },
+    { label: 'Parking & Deliveries', href: '/admin/parking', icon: Car },
     { label: 'Complaints Triage', href: '/admin/complaints', icon: ClipboardList },
     { label: 'Maintenance Billing', href: '/admin/billing', icon: Wallet },
     { label: 'Financial Expenses', href: '/admin/expenses', icon: BookOpen },
@@ -59,6 +61,7 @@ const ROLE_NAV_ITEMS: Record<UserRole, Array<{ label: string; href: string; icon
   SUPER_ADMIN: [
     { label: 'Governance Console', href: '/super-admin/dashboard', icon: Home },
     { label: 'User Roles & Access', href: '/super-admin/users', icon: Users },
+    { label: 'Parking & Deliveries', href: '/admin/parking', icon: Car },
     { label: 'Flat Configurations', href: '/super-admin/flats', icon: BookOpen },
     { label: 'Audit Trail', href: '/super-admin/audit', icon: ClipboardList },
     { label: 'System Config', href: '/super-admin/config', icon: Settings },

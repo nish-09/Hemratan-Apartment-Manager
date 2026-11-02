@@ -1,9 +1,9 @@
-﻿import React from 'react';
+import React from 'react';
 import { AppShell } from '@/components/layout/app-shell';
 import { StatCard } from '@/components/ui/stat-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { IndianRupee, ShieldCheck, Users, Receipt, ArrowUpRight, ArrowDownRight, BellRing, Plus, Calendar } from 'lucide-react';
+import { IndianRupee, ShieldCheck, Users, Receipt, ArrowUpRight, ArrowDownRight, BellRing, Plus, Calendar, Package, Car } from 'lucide-react';
 import Link from 'next/link';
 
 export default function ResidentDashboard() {
@@ -20,6 +20,12 @@ export default function ResidentDashboard() {
           <span className="text-xs font-bold text-[#77798A]">Wing A • 4th Floor • 1,450 sq.ft</span>
         </div>
         <div className="flex items-center gap-2">
+          <Link href="/resident/deliveries">
+            <Button variant="outline" size="sm" className="gap-1.5 bg-[#FAF7A7] font-bold">
+              <Package className="w-3.5 h-3.5 text-[#20243A]" />
+              <span>Deliveries & Parking</span>
+            </Button>
+          </Link>
           <Link href="/resident/visitors">
             <Button variant="outline" size="sm" className="gap-1.5">
               <Plus className="w-3.5 h-3.5" />
