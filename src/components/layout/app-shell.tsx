@@ -24,6 +24,8 @@ import {
   Package,
   Calculator,
   TrendingUp,
+  BarChart3,
+  FileText,
 } from 'lucide-react';
 import { UserRole } from '@/types/roles';
 
@@ -53,6 +55,8 @@ const ROLE_NAV_ITEMS: Record<UserRole, Array<{ label: string; href: string; icon
   ],
   COMMITTEE: [
     { label: 'Operations Cockpit', href: '/admin/dashboard', icon: Home },
+    { label: 'Society Analytics', href: '/admin/analytics', icon: BarChart3 },
+    { label: 'Reports Centre', href: '/admin/reports', icon: FileText },
     { label: 'Finance Analytics', href: '/admin/finance', icon: TrendingUp },
     { label: 'Bill Calculator', href: '/admin/billing/calculator', icon: Calculator },
     { label: 'Generate Bills', href: '/admin/billing/generate', icon: Wallet },
@@ -64,7 +68,9 @@ const ROLE_NAV_ITEMS: Record<UserRole, Array<{ label: string; href: string; icon
   ],
   SUPER_ADMIN: [
     { label: 'Governance Console', href: '/super-admin/dashboard', icon: Home },
-    { label: 'Finance Analytics', href: '/admin/finance', icon: TrendingUp },
+    { label: 'System Analytics', href: '/super-admin/analytics', icon: BarChart3 },
+    { label: 'Society Analytics', href: '/admin/analytics', icon: TrendingUp },
+    { label: 'Reports Centre', href: '/admin/reports', icon: FileText },
     { label: 'Generate Bills', href: '/admin/billing/generate', icon: Wallet },
     { label: 'Society Expenses', href: '/admin/expenses', icon: BookOpen },
     { label: 'User Roles & Access', href: '/super-admin/users', icon: Users },
