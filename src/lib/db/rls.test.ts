@@ -126,6 +126,27 @@ describe('Database Row-Level Security (RLS) & Access Policy Audit', () => {
     expect(migration005Sql).toContain('Staff can view assigned tasks');
   });
 
+  it('verifies RLS is enabled on all directory and domestic help tables in migration 006', () => {
+    const migration006Path = path.resolve(import.meta.dirname, '../../../supabase/migrations/20261102000006_directory_and_domestic_help.sql');
+    const migration006Sql = fs.readFileSync(migration006Path, 'utf8');
+
+    const stage5Tables = [
+      'service_providers',
+      'domestic_staff',
+      'staff_flat_authorizations',
+      'staff_attendance_logs',
+      'directory_contact_access_logs',
+    ];
+
+    for (const table of stage5Tables) {
+      expect(migration006Sql).toContain(`ALTER TABLE public.${table} ENABLE ROW LEVEL SECURITY;`);
+    }
+    expect(migration006Sql).toContain('Guards can record staff attendance');
+    expect(migration006Sql).toContain('Residents can view attendance for their domestic staff');
+    expect(migration006Sql).toContain('Committee can manage directory listings');
+    expect(migration006Sql).toContain('Authenticated users can view active verified directory');
+  });
+
   it('grants Super Admin full platform governance', () => {
     const superAdminRole: UserRole = 'SUPER_ADMIN';
     expect(hasPermission(superAdminRole, PERMISSIONS.USERS_MANAGE)).toBe(true);
