@@ -1,13 +1,13 @@
 ﻿-- Hemratan Apartment Manager: Migration 002 - Row-Level Security (RLS) & Access Control
 -- Strict enforcement of Role-Based and Flat-Level permissions at the database level
 
--- 1. SECURITY DEFINER HELPER FUNCTIONS
+-- 1. SECURITY DEFINER HELPER FUNCTIONS WITH FIXED SEARCH_PATH
 CREATE OR REPLACE FUNCTION public.current_user_role()
 RETURNS TEXT
 LANGUAGE sql
 STABLE
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, pg_temp
 AS $$
   SELECT r.name
   FROM public.user_roles ur
@@ -21,7 +21,7 @@ RETURNS BOOLEAN
 LANGUAGE sql
 STABLE
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, pg_temp
 AS $$
   SELECT EXISTS (
     SELECT 1
@@ -37,7 +37,7 @@ RETURNS BOOLEAN
 LANGUAGE sql
 STABLE
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, pg_temp
 AS $$
   SELECT EXISTS (
     -- Direct flat member
@@ -47,6 +47,15 @@ AS $$
       AND flat_id = target_flat_id
   ) OR public.has_role('COMMITTEE') OR public.has_role('SUPER_ADMIN');
 $$;
+
+-- Explicitly revoke public execution from untrusted roles
+REVOKE EXECUTE ON FUNCTION public.current_user_role() FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.has_role(TEXT) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.has_flat_access(UUID) FROM PUBLIC;
+
+GRANT EXECUTE ON FUNCTION public.current_user_role() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.has_role(TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.has_flat_access(UUID) TO authenticated;
 
 -- 2. ENABLE RLS ACROSS ALL CORE TABLES
 ALTER TABLE public.buildings ENABLE ROW LEVEL SECURITY;
@@ -60,7 +69,6 @@ ALTER TABLE public.user_roles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_flat_memberships ENABLE ROW LEVEL SECURITY;
 
 -- 3. RLS POLICIES FOR BUILDINGS, WINGS & FLATS
--- All authenticated users can view building & wing structures
 CREATE POLICY "Allow authenticated read buildings"
   ON public.buildings FOR SELECT
   TO authenticated
