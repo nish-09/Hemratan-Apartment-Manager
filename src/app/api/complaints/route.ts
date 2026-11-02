@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
   } catch (err: any) {
     if (err instanceof z.ZodError) {
       return NextResponse.json(
-        { error: err.issues?.[0]?.message || err.errors?.[0]?.message || err.message || 'Validation error' },
+        { error: err.issues[0]?.message || 'Validation error' },
         { status: 400 }
       );
     }

@@ -44,7 +44,10 @@ export async function POST(
     return NextResponse.json({ identity });
   } catch (err: any) {
     if (err instanceof z.ZodError) {
-      return NextResponse.json({ error: err.errors[0]?.message || 'Validation error' }, { status: 400 });
+      return NextResponse.json(
+        { error: err.issues[0]?.message || 'Validation error' },
+        { status: 400 }
+      );
     }
     return NextResponse.json({ error: err.message || 'Failed to reveal identity' }, { status: 400 });
   }

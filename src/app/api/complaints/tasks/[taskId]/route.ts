@@ -40,7 +40,10 @@ export async function PATCH(
     return NextResponse.json({ task: updatedTask });
   } catch (err: any) {
     if (err instanceof z.ZodError) {
-      return NextResponse.json({ error: err.errors[0]?.message || 'Validation error' }, { status: 400 });
+      return NextResponse.json(
+        { error: err.issues[0]?.message || 'Validation error' },
+        { status: 400 }
+      );
     }
     return NextResponse.json({ error: err.message || 'Failed to update task progress' }, { status: 400 });
   }

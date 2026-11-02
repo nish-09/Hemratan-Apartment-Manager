@@ -44,7 +44,10 @@ export async function PATCH(
     return NextResponse.json({ complaint: updated });
   } catch (err: any) {
     if (err instanceof z.ZodError) {
-      return NextResponse.json({ error: err.errors[0]?.message || 'Validation error' }, { status: 400 });
+      return NextResponse.json(
+        { error: err.issues[0]?.message || 'Validation error' },
+        { status: 400 }
+      );
     }
     return NextResponse.json({ error: err.message || 'Failed to confirm ETA' }, { status: 400 });
   }

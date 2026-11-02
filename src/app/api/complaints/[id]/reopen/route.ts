@@ -35,7 +35,10 @@ export async function POST(
     return NextResponse.json({ complaint: updated });
   } catch (err: any) {
     if (err instanceof z.ZodError) {
-      return NextResponse.json({ error: err.errors[0]?.message || 'Validation error' }, { status: 400 });
+      return NextResponse.json(
+        { error: err.issues[0]?.message || 'Validation error' },
+        { status: 400 }
+      );
     }
     return NextResponse.json({ error: err.message || 'Failed to reopen complaint' }, { status: 400 });
   }
