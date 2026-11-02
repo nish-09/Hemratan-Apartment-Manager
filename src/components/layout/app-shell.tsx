@@ -1,8 +1,8 @@
-'use client';
+﻿'use client';
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   Home,
   ShieldCheck,
@@ -20,6 +20,7 @@ import {
   ChevronRight,
   Menu,
   X,
+  Users,
 } from 'lucide-react';
 import { UserRole } from '@/types/roles';
 
@@ -31,6 +32,39 @@ interface AppShellProps {
   showRightPanel?: boolean;
 }
 
+const ROLE_NAV_ITEMS: Record<UserRole, Array<{ label: string; href: string; icon: any }>> = {
+  RESIDENT: [
+    { label: 'Resident Home', href: '/resident/dashboard', icon: Home },
+    { label: 'Visitors', href: '/resident/visitors', icon: ShieldCheck },
+    { label: 'Complaints', href: '/resident/complaints', icon: ClipboardList },
+    { label: 'Maintenance & Bills', href: '/resident/bills', icon: Wallet },
+    { label: 'Parking & Deliveries', href: '/resident/parking', icon: Car },
+    { label: 'Rules & Directory', href: '/resident/rules', icon: BookOpen },
+  ],
+  GUARD: [
+    { label: 'Gate Control', href: '/guard/dashboard', icon: ShieldCheck },
+    { label: 'Visitor Logs', href: '/guard/visitors', icon: Users },
+    { label: 'Delivery Intake', href: '/guard/deliveries', icon: Car },
+    { label: 'Staff Attendance', href: '/guard/staff', icon: ClipboardList },
+    { label: 'Parking Slots', href: '/guard/parking', icon: Home },
+  ],
+  COMMITTEE: [
+    { label: 'Operations Cockpit', href: '/admin/dashboard', icon: Home },
+    { label: 'Flats & Members', href: '/admin/flats', icon: Users },
+    { label: 'Complaints Triage', href: '/admin/complaints', icon: ClipboardList },
+    { label: 'Maintenance Billing', href: '/admin/billing', icon: Wallet },
+    { label: 'Financial Expenses', href: '/admin/expenses', icon: BookOpen },
+    { label: 'Rules & Schedules', href: '/admin/rules', icon: Settings },
+  ],
+  SUPER_ADMIN: [
+    { label: 'Governance Console', href: '/super-admin/dashboard', icon: Home },
+    { label: 'User Roles & Access', href: '/super-admin/users', icon: Users },
+    { label: 'Flat Configurations', href: '/super-admin/flats', icon: BookOpen },
+    { label: 'Audit Trail', href: '/super-admin/audit', icon: ClipboardList },
+    { label: 'System Config', href: '/super-admin/config', icon: Settings },
+  ],
+};
+
 export function AppShell({
   children,
   activeRole = 'RESIDENT',
@@ -39,17 +73,29 @@ export function AppShell({
   showRightPanel = true,
 }: AppShellProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const navItems = [
-    { label: 'Home', href: '/', icon: Home },
-    { label: 'Visitors', href: '/resident/visitors', icon: ShieldCheck },
-    { label: 'Complaints', href: '/resident/complaints', icon: ClipboardList },
-    { label: 'Maintenance & Bills', href: '/resident/bills', icon: Wallet },
-    { label: 'Parking & Deliveries', href: '/resident/parking', icon: Car },
-    { label: 'Rules & Directory', href: '/resident/rules', icon: BookOpen },
-  ];
+  const navItems = ROLE_NAV_ITEMS[activeRole] || ROLE_NAV_ITEMS.RESIDENT;
+
+  // Extract initials
+  const initials = userName
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((n) => n[0].toUpperCase())
+    .join('');
+
+  async function handleLogout() {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch {
+      // Fallback
+    }
+    router.push('/login');
+    router.refresh();
+  }
 
   return (
     <div className="w-full min-h-screen h-screen bg-white flex flex-col lg:flex-row overflow-hidden">
@@ -58,7 +104,7 @@ export function AppShell({
         {/* Brand Logo */}
         <div className="flex flex-col items-center gap-1">
           <Link
-            href="/"
+            href={navItems[0]?.href || '/'}
             aria-label="Hemratan Home"
             className="w-12 h-12 rounded-2xl bg-white border-[1.5px] border-[#303044] flex items-center justify-center font-black text-xl text-[#20243A] shadow-[2px_2px_0px_#303044] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all"
           >
@@ -70,7 +116,7 @@ export function AppShell({
         <nav className="flex flex-col items-center gap-3 w-full" aria-label="Main Navigation">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = pathname === item.href;
+            const isActive = pathname === item.href || (item.href === '/resident/dashboard' && pathname === '/');
             return (
               <Link
                 key={item.href}
@@ -91,16 +137,17 @@ export function AppShell({
         {/* Bottom Actions */}
         <div className="flex flex-col items-center gap-3">
           <Link
-            href="/settings"
-            title="Settings"
+            href="/login"
+            title="Switch User / Login"
             className="w-10 h-10 rounded-xl flex items-center justify-center text-[#20243A] hover:bg-black/10 transition-colors"
           >
             <Settings className="w-5 h-5 stroke-[2]" />
           </Link>
           <button
             type="button"
+            onClick={handleLogout}
             title="Log out"
-            className="w-10 h-10 rounded-xl flex items-center justify-center text-[#20243A] hover:bg-rose-200/50 hover:text-rose-900 transition-colors"
+            className="w-10 h-10 rounded-xl flex items-center justify-center text-[#20243A] hover:bg-rose-200/50 hover:text-rose-900 transition-colors cursor-pointer"
           >
             <LogOut className="w-5 h-5 stroke-[2]" />
           </button>
@@ -141,13 +188,20 @@ export function AppShell({
               </Link>
             );
           })}
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold text-rose-800 hover:bg-rose-100 border border-transparent transition-all mt-2"
+          >
+            <LogOut className="w-5 h-5" />
+            <span>Sign Out</span>
+          </button>
         </div>
       )}
 
       {/* MAIN VIEWPORT CONTENT */}
-      <div className="flex-1 flex flex-col overflow-y-auto">
+      <div className="flex-1 flex flex-col h-full overflow-y-auto">
         {/* Top Header */}
-        <header className="px-6 sm:px-8 pt-6 pb-4 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#303044]/10">
+        <header className="px-6 sm:px-8 pt-6 pb-4 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#303044]/10 shrink-0">
           <div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-[#20243A] tracking-tight">
               Good evening, {userName.split(' ')[0]}!
@@ -194,10 +248,14 @@ export function AppShell({
               <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-rose-500 border border-white" />
             </button>
 
-            {/* User Avatar */}
-            <div className="w-9 h-9 rounded-full border-[1.5px] border-[#303044] overflow-hidden bg-[#FAF7A7] flex items-center justify-center font-bold text-xs text-[#20243A]">
-              JP
-            </div>
+            {/* User Avatar with Initials */}
+            <Link
+              href="/login"
+              title="Click to Switch User Profile"
+              className="w-9 h-9 rounded-full border-[1.5px] border-[#303044] overflow-hidden bg-[#FAF7A7] flex items-center justify-center font-bold text-xs text-[#20243A] hover:scale-105 transition-transform"
+            >
+              {initials}
+            </Link>
           </div>
         </header>
 
@@ -235,7 +293,7 @@ export function AppShell({
                 </button>
               </div>
               <div className="w-8 h-8 rounded-full border border-[#303044] bg-[#FAF7A7] flex items-center justify-center font-bold text-xs text-[#20243A]">
-                JP
+                {initials}
               </div>
             </div>
 

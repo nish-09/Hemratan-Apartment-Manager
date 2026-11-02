@@ -1,4 +1,4 @@
-﻿# Hemratan Apartment Manager
+# Hemratan Apartment Manager
 
 > One community. One connected platform.
 
@@ -52,7 +52,7 @@ Hemratan Apartment Manager is a modern, production-conscious residential society
 Implementation in active staged progress according to the development roadmap.
 
 - [x] **Stage 0: Repository Foundation & Core Next.js Setup**
-- [ ] **Stage 1: Authentication & Role Dashboards**
+- [x] **Stage 1: Authentication & Role Dashboards**
 - [ ] **Stage 2: Visitor Management & OTP Workflow**
 - [ ] **Stage 3: Visitor Parking & Delivery Management**
 - [ ] **Stage 4: Complaints & Task Management**
