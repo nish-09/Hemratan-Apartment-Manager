@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState } from 'react';
 import Link from 'next/link';
@@ -52,9 +52,9 @@ export function AppShell({
   ];
 
   return (
-    <div className="w-full max-w-[1580px] mx-auto my-auto min-h-[94vh] bg-white rounded-[28px] sm:rounded-[36px] border-[1.5px] border-[#303044] shadow-[4px_6px_0px_rgba(48,48,68,0.2)] flex flex-col lg:flex-row overflow-hidden">
+    <div className="w-full min-h-screen h-screen bg-white flex flex-col lg:flex-row overflow-hidden">
       {/* 1. LIME GREEN SIDEBAR (Desktop) */}
-      <aside className="hidden lg:flex flex-col items-center justify-between w-[84px] bg-[#C9F36B] border-r-[1.5px] border-[#303044] py-6 px-2 select-none shrink-0">
+      <aside className="hidden lg:flex flex-col items-center justify-between w-[84px] bg-[#C9F36B] border-r-[1.5px] border-[#303044] py-6 px-2 select-none shrink-0 h-full">
         {/* Brand Logo */}
         <div className="flex flex-col items-center gap-1">
           <Link
@@ -207,7 +207,7 @@ export function AppShell({
 
       {/* 3. RIGHT PANEL - CALENDAR & ACTIVITIES (Desktop/Tablet) */}
       {showRightPanel && (
-        <aside className="hidden xl:flex flex-col w-[320px] bg-[#E7FAA4] border-l-[1.5px] border-[#303044] p-6 shrink-0 justify-between">
+        <aside className="hidden xl:flex flex-col w-[320px] bg-[#E7FAA4] border-l-[1.5px] border-[#303044] p-6 shrink-0 justify-between h-full overflow-y-auto">
           <div className="flex flex-col gap-6">
             {/* Panel Header Icons */}
             <div className="flex items-center justify-between pb-2 border-b border-[#303044]/20">

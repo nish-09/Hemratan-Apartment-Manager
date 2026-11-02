@@ -22,7 +22,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${manrope.variable} h-full`}>
-      <body className="min-h-screen bg-[#EAE5FA] text-[#20243A] flex flex-col p-2 sm:p-4 md:p-6 lg:p-8 antialiased selection:bg-[#C9F36B] selection:text-[#20243A]">
+      <body className="min-h-screen w-full bg-white text-[#20243A] flex flex-col p-0 m-0 antialiased selection:bg-[#C9F36B] selection:text-[#20243A]">
         {children}
       </body>
     </html>

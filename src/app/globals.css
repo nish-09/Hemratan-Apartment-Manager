@@ -1,8 +1,8 @@
-﻿@import "tailwindcss";
+@import "tailwindcss";
 
 @layer base {
   :root {
-    --app-bg: #EAE5FA;
+    --app-bg: #FFFFFF;
     --sidebar-bg: #C9F36B;
     --sidebar-border: #303044;
     --surface: #FFFFFF;
