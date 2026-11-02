@@ -322,11 +322,13 @@ export class DirectoryService {
     category?: DirectoryCategory;
     search?: string;
     verifiedOnly?: boolean;
+    maskPhone?: boolean;
+    includeInactive?: boolean;
   }): ServiceProvider[] {
     return providersStore
       .filter((p) => {
-        // Must have active listing and valid consent
-        if (!p.isListingActive || p.consentWithdrawnAt) return false;
+        // Must have active listing and valid consent unless includeInactive
+        if (!filters?.includeInactive && (!p.isListingActive || p.consentWithdrawnAt)) return false;
         if (filters?.verifiedOnly && p.verificationStatus !== 'VERIFIED') return false;
         if (filters?.category && p.category !== filters.category) return false;
         if (filters?.search) {
@@ -340,9 +342,69 @@ export class DirectoryService {
       })
       .map((p) => ({
         ...p,
-        // Plaintext phoneNumber is masked for general directory inquiries
-        phoneNumber: p.maskedPhone,
+        // Plaintext phoneNumber is masked unless explicitly requested unmasked (e.g. for Committee)
+        phoneNumber: filters?.maskPhone === false ? p.phoneNumber : p.maskedPhone,
       }));
+  }
+
+  /**
+   * Helper: Get provider by ID
+   */
+  static getProviderById(id: string): ServiceProvider | undefined {
+    return providersStore.find((p) => p.id === id);
+  }
+
+  /**
+   * Register a New Service Provider (Consent Required)
+   */
+  static registerServiceProvider(input: {
+    fullName: string;
+    category: DirectoryCategory;
+    phoneNumber: string;
+    bio?: string;
+    languages?: string;
+    workingHours?: string;
+    idProofType?: string;
+    idProofNumberMasked?: string;
+    hasPoliceVerification?: boolean;
+    verificationStatus?: ServiceVerificationStatus;
+    consentGiven: boolean;
+  }): ServiceProvider {
+    if (!input.consentGiven) {
+      throw new Error('Worker consent is mandatory for directory listing.');
+    }
+    if (!input.fullName || input.fullName.trim().length < 2) {
+      throw new Error('Full name must be at least 2 characters.');
+    }
+    if (!input.phoneNumber || input.phoneNumber.trim().length < 10) {
+      throw new Error('Valid 10-digit mobile number is required.');
+    }
+
+    const now = new Date().toISOString();
+    const id = `sp-${Date.now()}`;
+    const maskedPhone = this.maskPhoneNumber(input.phoneNumber);
+
+    const provider: ServiceProvider = {
+      id,
+      fullName: input.fullName.trim(),
+      category: input.category,
+      phoneNumber: input.phoneNumber.trim(),
+      maskedPhone,
+      bio: input.bio,
+      languages: input.languages || 'Hindi, English',
+      workingHours: input.workingHours || '09:00 AM - 06:00 PM',
+      verificationStatus: input.verificationStatus || 'PENDING',
+      hasPoliceVerification: input.hasPoliceVerification ?? false,
+      idProofType: input.idProofType || 'AADHAAR',
+      idProofNumberMasked: input.idProofNumberMasked,
+      isListingActive: true,
+      consentGivenAt: now,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    providersStore.unshift(provider);
+    return provider;
   }
 
   /**
