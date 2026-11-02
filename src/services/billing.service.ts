@@ -1007,6 +1007,173 @@ export class BillingService {
   }
 
   /**
+   * Collections Report
+   */
+  static getCollectionsReport(): {
+    totalCollectedPaise: number;
+    byPaymentMethod: Record<string, number>;
+    recentCollections: Array<{
+      paymentId: string;
+      reference: string;
+      flatNumber: string;
+      wing: string;
+      amountPaise: number;
+      paymentMethod: string;
+      date: string;
+    }>;
+  } {
+    let totalCollectedPaise = 0;
+    const byPaymentMethod: Record<string, number> = {};
+    const recentCollections: Array<{
+      paymentId: string;
+      reference: string;
+      flatNumber: string;
+      wing: string;
+      amountPaise: number;
+      paymentMethod: string;
+      date: string;
+    }> = [];
+
+    for (const p of paymentsStore) {
+      if (p.status !== 'SUCCESS') continue;
+      totalCollectedPaise += p.amountPaise;
+      byPaymentMethod[p.paymentMethod] = (byPaymentMethod[p.paymentMethod] || 0) + p.amountPaise;
+
+      const invoice = invoicesStore.find((inv) => inv.id === p.invoiceId);
+      recentCollections.push({
+        paymentId: p.id,
+        reference: p.paymentReferenceNo,
+        flatNumber: invoice?.flatNumber || 'Unknown',
+        wing: invoice?.wing || 'Unknown',
+        amountPaise: p.amountPaise,
+        paymentMethod: p.paymentMethod,
+        date: p.transactionTimestamp,
+      });
+    }
+
+    return {
+      totalCollectedPaise,
+      byPaymentMethod,
+      recentCollections: recentCollections.slice(0, 50),
+    };
+  }
+
+  /**
+   * Outstanding Dues Report
+   */
+  static getOutstandingReport(): {
+    totalOutstandingPaise: number;
+    wingBreakdown: Record<string, { totalPaise: number; count: number }>;
+    overdueInvoices: Array<{
+      invoiceId: string;
+      invoiceNumber: string;
+      flatNumber: string;
+      wing: string;
+      dueDate: string;
+      outstandingPaise: number;
+      status: InvoiceStatus;
+    }>;
+  } {
+    let totalOutstandingPaise = 0;
+    const wingBreakdown: Record<string, { totalPaise: number; count: number }> = {
+      A: { totalPaise: 0, count: 0 },
+      B: { totalPaise: 0, count: 0 },
+      C: { totalPaise: 0, count: 0 },
+    };
+    const overdueInvoices: Array<{
+      invoiceId: string;
+      invoiceNumber: string;
+      flatNumber: string;
+      wing: string;
+      dueDate: string;
+      outstandingPaise: number;
+      status: InvoiceStatus;
+    }> = [];
+
+    for (const inv of invoicesStore) {
+      if (inv.status === 'CANCELLED' || inv.status === 'PAID') continue;
+      if (inv.outstandingBalancePaise <= 0) continue;
+
+      totalOutstandingPaise += inv.outstandingBalancePaise;
+      const wingKey = inv.wing || 'Other';
+      if (!wingBreakdown[wingKey]) {
+        wingBreakdown[wingKey] = { totalPaise: 0, count: 0 };
+      }
+      wingBreakdown[wingKey].totalPaise += inv.outstandingBalancePaise;
+      wingBreakdown[wingKey].count += 1;
+
+      const isOverdue = inv.status === 'OVERDUE' || new Date() > new Date(inv.dueDate);
+      if (isOverdue) {
+        overdueInvoices.push({
+          invoiceId: inv.id,
+          invoiceNumber: inv.invoiceNumber,
+          flatNumber: inv.flatNumber,
+          wing: inv.wing,
+          dueDate: inv.dueDate,
+          outstandingPaise: inv.outstandingBalancePaise,
+          status: inv.status,
+        });
+      }
+    }
+
+    return {
+      totalOutstandingPaise,
+      wingBreakdown,
+      overdueInvoices,
+    };
+  }
+
+  /**
+   * Export Financial Register CSV
+   */
+  static generateFinancialExportCsv(type: 'invoices' | 'payments' | 'expenses' | 'all' = 'all'): string {
+    const lines: string[] = [];
+
+    if (type === 'invoices' || type === 'all') {
+      lines.push('--- INVOICES REGISTER ---');
+      lines.push('Invoice Number,Flat,Wing,Period,Total Amount (INR),Paid Amount (INR),Outstanding (INR),Status,Due Date');
+      for (const inv of invoicesStore) {
+        lines.push(
+          [
+            inv.invoiceNumber,
+            inv.flatNumber,
+            inv.wing,
+            `${inv.billingPeriodMonth}/${inv.billingPeriodYear}`,
+            (inv.totalAmountPaise / 100).toFixed(2),
+            (inv.paidAmountPaise / 100).toFixed(2),
+            (inv.outstandingBalancePaise / 100).toFixed(2),
+            inv.status,
+            inv.dueDate,
+          ].join(',')
+        );
+      }
+      lines.push('');
+    }
+
+    if (type === 'payments' || type === 'all') {
+      lines.push('--- PAYMENTS REGISTER ---');
+      lines.push('Payment Ref,Invoice ID,Flat ID,Amount (INR),Method,Status,Date,Receipt Number');
+      for (const p of paymentsStore) {
+        lines.push(
+          [
+            p.paymentReferenceNo,
+            p.invoiceId,
+            p.flatId,
+            (p.amountPaise / 100).toFixed(2),
+            p.paymentMethod,
+            p.status,
+            p.transactionTimestamp,
+            p.receiptNumber || 'N/A',
+          ].join(',')
+        );
+      }
+      lines.push('');
+    }
+
+    return lines.join('\n');
+  }
+
+  /**
    * Test Reset
    */
   static _resetForTesting() {

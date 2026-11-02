@@ -16,6 +16,10 @@ import { POST as approveExpenseHandler } from '../expenses/[id]/approve/route';
 import { POST as verifyPaymentHandler } from '../payments/[id]/verify/route';
 import { POST as refundPaymentHandler } from '../payments/[id]/refund/route';
 import { GET as financeSummaryHandler } from '../finance/summary/route';
+import { GET as collectionsHandler } from '../finance/collections/route';
+import { GET as outstandingHandler } from '../finance/outstanding/route';
+import { GET as expensesReportHandler } from '../finance/expenses/route';
+import { GET as exportHandler } from '../finance/export/route';
 import { POST as disputeHandler } from './disputes/route';
 import { createSessionToken, SESSION_COOKIE_NAME } from '@/lib/auth/session';
 import { BillingService } from '@/services/billing.service';
@@ -774,5 +778,95 @@ describe('Financial Accounting & Billing REST APIs', () => {
       expect(patchApprovedRes.status).toBe(400);
     });
   });
+
+  describe('Financial Reports & Register Export Endpoints', () => {
+    it('denies access to non-authorized roles (Guard / Resident) on finance reports', async () => {
+      // Resident check
+      const resReq = new NextRequest('http://localhost:3000/api/finance/collections', {
+        headers: { cookie: `${SESSION_COOKIE_NAME}=${residentToken}` },
+      });
+      const resResponse = await collectionsHandler(resReq);
+      expect(resResponse.status).toBe(403);
+
+      // Guard check
+      const guardReq = new NextRequest('http://localhost:3000/api/finance/outstanding', {
+        headers: { cookie: `${SESSION_COOKIE_NAME}=${guardToken}` },
+      });
+      const guardResponse = await outstandingHandler(guardReq);
+      expect(guardResponse.status).toBe(403);
+    });
+
+    it('returns collections report with method breakdown for Committee', async () => {
+      // 1. Generate and pay an invoice
+      const invoice = BillingService.generateInvoice({
+        flatId: 'flat-a-402',
+        flatNumber: '402',
+        wing: 'A',
+        areaSqFt: 1100,
+        billingPeriodId: 'bp-2026-11',
+      });
+      BillingService.recordPayment({
+        invoiceId: invoice.id,
+        amountPaise: 500000,
+        paymentMethod: 'ONLINE_GATEWAY',
+      });
+
+      // 2. Fetch collections report
+      const req = new NextRequest('http://localhost:3000/api/finance/collections', {
+        headers: { cookie: `${SESSION_COOKIE_NAME}=${committeeToken}` },
+      });
+      const res = await collectionsHandler(req);
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.collections.totalCollectedPaise).toBeGreaterThanOrEqual(500000);
+      expect(data.collections.byPaymentMethod.ONLINE_GATEWAY).toBeGreaterThanOrEqual(500000);
+    });
+
+    it('returns outstanding dues report grouped by wing for Committee', async () => {
+      // 1. Generate invoice with balance
+      BillingService.generateInvoice({
+        flatId: 'flat-b-102',
+        flatNumber: '102',
+        wing: 'B',
+        areaSqFt: 850,
+        billingPeriodId: 'bp-2026-11',
+      });
+
+      // 2. Fetch outstanding report
+      const req = new NextRequest('http://localhost:3000/api/finance/outstanding', {
+        headers: { cookie: `${SESSION_COOKIE_NAME}=${committeeToken}` },
+      });
+      const res = await outstandingHandler(req);
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.outstanding.totalOutstandingPaise).toBeGreaterThan(0);
+      expect(data.outstanding.wingBreakdown.B.totalPaise).toBeGreaterThan(0);
+    });
+
+    it('returns expenses report with category breakdown for Committee', async () => {
+      const req = new NextRequest('http://localhost:3000/api/finance/expenses', {
+        headers: { cookie: `${SESSION_COOKIE_NAME}=${committeeToken}` },
+      });
+      const res = await expensesReportHandler(req);
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.summary.totalExpensesPaise).toBeGreaterThan(0);
+      expect(Array.isArray(data.expenses)).toBe(true);
+    });
+
+    it('exports financial register as CSV with appropriate headers', async () => {
+      const req = new NextRequest('http://localhost:3000/api/finance/export?type=all', {
+        headers: { cookie: `${SESSION_COOKIE_NAME}=${committeeToken}` },
+      });
+      const res = await exportHandler(req);
+      expect(res.status).toBe(200);
+      expect(res.headers.get('Content-Type')).toContain('text/csv');
+      expect(res.headers.get('Content-Disposition')).toContain('attachment');
+      const csv = await res.text();
+      expect(csv).toContain('--- INVOICES REGISTER ---');
+      expect(csv).toContain('--- PAYMENTS REGISTER ---');
+    });
+  });
 });
+
 
