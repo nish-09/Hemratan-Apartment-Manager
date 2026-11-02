@@ -20,7 +20,7 @@ export async function POST(
     }
 
     const user = getAuthenticatedUser(sessionCookie.value);
-    if (!user || (user.role !== 'SUPER_ADMIN' && user.role !== 'COMMITTEE' && user.role !== 'COMMITTEE_MEMBER')) {
+    if (!user || (user.role !== 'SUPER_ADMIN' && user.role !== 'COMMITTEE')) {
       return NextResponse.json({ error: 'Unauthorized: Committee or Admin required' }, { status: 403 });
     }
 

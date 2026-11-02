@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     }
 
     const user = getAuthenticatedUser(sessionCookie.value);
-    if (!user || (user.role !== 'GUARD' && user.role !== 'SECURITY_GUARD' && user.role !== 'SUPER_ADMIN' && user.role !== 'COMMITTEE' && user.role !== 'COMMITTEE_MEMBER')) {
+    if (!user || (user.role !== 'GUARD' && user.role !== 'SUPER_ADMIN' && user.role !== 'COMMITTEE')) {
       return NextResponse.json({ error: 'Forbidden: Guard or Committee authorization required' }, { status: 403 });
     }
 

@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
 
     // Residents, guards, or public get masked phones and active verified only.
     // SuperAdmin or Committee can view pending verification or inactive when includeAll is true.
-    const isCommitteeOrAdmin = !!user && (user.role === 'SUPER_ADMIN' || user.role === 'COMMITTEE' || user.role === 'COMMITTEE_MEMBER');
+    const isCommitteeOrAdmin = !!user && (user.role === 'SUPER_ADMIN' || user.role === 'COMMITTEE');
 
     const providers = DirectoryService.getDirectory({
       category: category || undefined,
@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const isDirectlyVerified = !!user && (user.role === 'SUPER_ADMIN' || user.role === 'COMMITTEE' || user.role === 'COMMITTEE_MEMBER');
+    const isDirectlyVerified = !!user && (user.role === 'SUPER_ADMIN' || user.role === 'COMMITTEE');
 
     const provider = DirectoryService.registerServiceProvider({
       fullName: parsed.data.fullName,
