@@ -22,7 +22,7 @@ export async function POST(
     }
 
     const { id } = await context.params;
-    const payment = BillingService.verifyOfflinePayment(id, user.profileId || user.id);
+    const payment = BillingService.verifyOfflinePayment(id, user.id);
 
     return NextResponse.json({ success: true, payment });
   } catch (error: unknown) {

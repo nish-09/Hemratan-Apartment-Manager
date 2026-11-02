@@ -95,7 +95,7 @@ export async function PATCH(
       expenseId: id,
       ...parsed.data,
       category: parsed.data.category as ExpenseCategory | undefined,
-      updatedByProfileId: user.profileId || user.id,
+      updatedByProfileId: user.id,
     });
 
     return NextResponse.json({ success: true, expense: updated });

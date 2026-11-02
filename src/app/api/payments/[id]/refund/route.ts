@@ -41,7 +41,7 @@ export async function POST(
       paymentId: id,
       refundAmountPaise: parsed.data.refundAmountPaise,
       reason: parsed.data.reason,
-      processedByProfileId: user.profileId || user.id,
+      processedByProfileId: user.id,
     });
 
     return NextResponse.json({ success: true, ...result });
