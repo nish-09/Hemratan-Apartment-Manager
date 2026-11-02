@@ -1,4 +1,4 @@
-﻿import crypto from 'crypto';
+import crypto from 'crypto';
 
 export interface OtpDeliveryResult {
   success: boolean;
@@ -19,6 +19,12 @@ export class MockOtpProvider implements IOtpProvider {
   public sentMessages: Array<{ mobile: string; otp: string; timestamp: Date }> = [];
 
   async sendOtp(mobile: string, otp: string, context: { visitorName: string; flatNumber: string }): Promise<OtpDeliveryResult> {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error(
+        'MockOtpProvider is restricted to development and testing environments only. Production must never use mock SMS delivery. Please configure a live SMS gateway provider.'
+      );
+    }
+
     // Record mock delivery
     this.sentMessages.push({
       mobile,
@@ -45,6 +51,36 @@ export const mockOtpProvider = new MockOtpProvider();
 export class OtpService {
   private static readonly OTP_VALIDITY_MS = 10 * 60 * 1000; // 10 minutes
   public static readonly MAX_ATTEMPTS = 3;
+  public static readonly RESEND_COOLDOWN_MS = 60 * 1000; // 60 seconds
+  private static readonly resendTimestamps = new Map<string, number>();
+
+  /**
+   * Checks whether the recipient must wait before requesting another OTP.
+   */
+  static checkResendCooldown(mobile: string): void {
+    const lastSent = this.resendTimestamps.get(mobile);
+    if (lastSent) {
+      const elapsed = Date.now() - lastSent;
+      if (elapsed < this.RESEND_COOLDOWN_MS) {
+        const remainingSec = Math.ceil((this.RESEND_COOLDOWN_MS - elapsed) / 1000);
+        throw new Error(`Please wait ${remainingSec} second(s) before requesting a new OTP.`);
+      }
+    }
+  }
+
+  /**
+   * Records the dispatch timestamp to enforce resend cooldowns.
+   */
+  static recordOtpSent(mobile: string): void {
+    this.resendTimestamps.set(mobile, Date.now());
+  }
+
+  /**
+   * Resets cooldown records (useful for automated testing).
+   */
+  static clearCooldowns(): void {
+    this.resendTimestamps.clear();
+  }
 
   /**
    * Generates a cryptographically strong 6-digit numeric OTP (100000 - 999999).

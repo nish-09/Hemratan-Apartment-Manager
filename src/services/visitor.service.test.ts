@@ -1,11 +1,14 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { VisitorService } from './visitor.service';
 import { SocietyService } from './society.service';
+import { OtpService, mockOtpProvider } from '@/lib/otp/otp-service';
 
 describe('VisitorService', () => {
   let sampleFlatId: string;
 
   beforeEach(() => {
+    VisitorService.resetStore();
+    OtpService.clearCooldowns();
     const flat = SocietyService.getFlats()[0];
     sampleFlatId = flat.id;
   });
@@ -105,6 +108,55 @@ describe('VisitorService', () => {
       expect(registration.visit.status).toBe('PENDING_CHECKS');
       expect(registration.rawOtp).toHaveLength(6);
       expect(/^\d{6}$/.test(registration.rawOtp)).toBe(true);
+    });
+
+    it('enforces 60-second OTP resend cooldown on repeated registrations for same phone', async () => {
+      await VisitorService.registerVisitor({
+        fullName: 'Sunil Chetri',
+        mobileNumber: '9821098210',
+        ageRange: '31_TO_50',
+        flatId: sampleFlatId,
+        purpose: 'Meeting',
+      });
+
+      // Immediate re-registration should trigger cooldown
+      await expect(
+        VisitorService.registerVisitor({
+          fullName: 'Sunil Chetri',
+          mobileNumber: '9821098210',
+          ageRange: '31_TO_50',
+          flatId: sampleFlatId,
+          purpose: 'Meeting',
+        })
+      ).rejects.toThrow(/Please wait \d+ second\(s\) before requesting a new OTP/);
+    });
+
+    it('prevents registering a duplicate visit if visitor is currently INSIDE', async () => {
+      // Seeded visitor Ramesh Verma is already INSIDE with mobile '+91 98765 43210'
+      await expect(
+        VisitorService.registerVisitor({
+          fullName: 'Ramesh Verma',
+          mobileNumber: '+91 98765 43210',
+          ageRange: '31_TO_50',
+          flatId: sampleFlatId,
+          purpose: 'Re-entry attempt',
+        })
+      ).rejects.toThrow('already recorded as inside society');
+    });
+
+    it('restricts MockOtpProvider in production environment', async () => {
+      const originalEnv = process.env.NODE_ENV;
+      try {
+        (process.env as any).NODE_ENV = 'production';
+        await expect(
+          mockOtpProvider.sendOtp('9899999999', '123456', {
+            visitorName: 'Test',
+            flatNumber: 'A-101',
+          })
+        ).rejects.toThrow('MockOtpProvider is restricted to development and testing environments only');
+      } finally {
+        (process.env as any).NODE_ENV = originalEnv;
+      }
     });
   });
 
@@ -271,6 +323,31 @@ describe('VisitorService', () => {
 
       // Attempting checkout again should fail
       expect(() => VisitorService.confirmExit(visit.id)).toThrow('Cannot checkout: Visitor status is "COMPLETED"');
+    });
+
+    it('guarantees that resident pre-approval cannot bypass gate OTP and guard authorisation', async () => {
+      // 1. Resident pre-approves guest in app
+      const { visit, rawOtp } = await VisitorService.registerVisitor({
+        fullName: 'VIP Guest',
+        mobileNumber: '9870098700',
+        ageRange: '31_TO_50',
+        flatId: sampleFlatId,
+        purpose: 'Dinner Invite',
+      });
+      VisitorService.recordApproval(visit.id, { channel: 'RESIDENT_APP', status: 'APPROVED' });
+
+      // Visitor arrives at gate. Attempting entry directly MUST FAIL because OTP is not verified
+      expect(() => VisitorService.confirmEntry(visit.id, 'usr-guard-001')).toThrow(
+        'Entry denied: Visitor OTP verification has not been completed'
+      );
+
+      // Guard verifies OTP
+      VisitorService.verifyOtp(visit.id, rawOtp);
+
+      // Guard explicitly confirms entry
+      const gateEntry = VisitorService.confirmEntry(visit.id, 'usr-guard-001');
+      expect(gateEntry.status).toBe('INSIDE');
+      expect(gateEntry.guardId).toBe('usr-guard-001');
     });
   });
 

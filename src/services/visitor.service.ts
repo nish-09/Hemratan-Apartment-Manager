@@ -1,4 +1,4 @@
-﻿import crypto from 'crypto';
+import crypto from 'crypto';
 import { OtpService, mockOtpProvider } from '@/lib/otp/otp-service';
 import { SocietyService } from './society.service';
 
@@ -143,7 +143,20 @@ export class VisitorService {
       }
     }
 
-    // 2. Lookup or create visitor master profile
+    // 2. Prevent duplicate active visit if visitor is currently inside
+    const alreadyInside = visitsStore.find(
+      (v) => v.visitor.mobileNumber === data.mobileNumber && v.status === 'INSIDE'
+    );
+    if (alreadyInside) {
+      throw new Error(
+        `Visitor with mobile ${data.mobileNumber} is already recorded as inside society (Flat ${alreadyInside.wing}-${alreadyInside.flatNumber}). Must checkout before re-registering.`
+      );
+    }
+
+    // 3. Enforce OTP resend cooldown (60 seconds minimum)
+    OtpService.checkResendCooldown(data.mobileNumber);
+
+    // 4. Lookup or create visitor master profile
     let visitor = visitorsStore.find((v) => v.mobileNumber === data.mobileNumber);
     if (!visitor) {
       visitor = {
@@ -157,10 +170,10 @@ export class VisitorService {
       visitorsStore.push(visitor);
     }
 
-    // 3. Generate secure OTP
+    // 5. Generate secure OTP
     const otpRecord = OtpService.createOtpRecord();
 
-    // 4. Create visit log
+    // 6. Create visit log
     const visit: VisitRecord = {
       id: `visit-${crypto.randomUUID()}`,
       visitorId: visitor.id,
@@ -185,11 +198,14 @@ export class VisitorService {
     };
     visitsStore.push(visit);
 
-    // 5. Dispatch SMS OTP
+    // 7. Dispatch SMS OTP via provider abstraction
     await mockOtpProvider.sendOtp(data.mobileNumber, otpRecord.rawOtp, {
       visitorName: data.fullName,
       flatNumber: `${flat.wing}-${flat.flatNumber}`,
     });
+
+    // Record dispatch timestamp for cooldown enforcement
+    OtpService.recordOtpSent(data.mobileNumber);
 
     return { visit, rawOtp: otpRecord.rawOtp };
   }
@@ -368,5 +384,34 @@ export class VisitorService {
 
   static getVisitById(id: string): VisitRecord | null {
     return visitsStore.find((v) => v.id === id) || null;
+  }
+
+  static resetStore(): void {
+    visitorsStore = [initialVisitor];
+    visitsStore = [
+      {
+        id: 'visit-seed-001',
+        visitorId: initialVisitor.id,
+        visitor: initialVisitor,
+        flatId: 'flat-a-402',
+        flatNumber: '402',
+        wing: 'A',
+        guardId: 'usr-guard-003',
+        purpose: 'Guest / Personal',
+        status: 'INSIDE',
+        otpVerified: true,
+        residentApproved: true,
+        entryTime: new Date(Date.now() - 3600000),
+        createdAt: new Date(Date.now() - 3600000),
+        updatedAt: new Date(),
+        otpRecord: initialOtpRecord,
+        approvalRecord: {
+          channel: 'GODREJ_INTERCOM',
+          status: 'APPROVED',
+          notes: 'Intercom confirmed by resident Jonathan Patel',
+          recordedAt: new Date(Date.now() - 3600000),
+        },
+      },
+    ];
   }
 }

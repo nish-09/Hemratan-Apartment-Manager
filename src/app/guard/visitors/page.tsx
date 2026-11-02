@@ -46,9 +46,16 @@ export default function GuardVisitorsPage() {
   const [formFlatId, setFormFlatId] = useState('');
   const [formPurpose, setFormPurpose] = useState('Guest / Personal');
   const [formPhotoPreview, setFormPhotoPreview] = useState<string | null>(null);
+  const [visitorConsent, setVisitorConsent] = useState(false);
+  const [isWebcamActive, setIsWebcamActive] = useState(false);
+  const [webcamError, setWebcamError] = useState('');
   const [registerError, setRegisterError] = useState('');
   const [registerSuccessMsg, setRegisterSuccessMsg] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  const videoRef = React.useRef<HTMLVideoElement | null>(null);
+  const canvasRef = React.useRef<HTMLCanvasElement | null>(null);
+  const streamRef = React.useRef<MediaStream | null>(null);
 
   // Verification Input state map: visitId -> otp string
   const [otpInputs, setOtpInputs] = useState<Record<string, string>>({});
@@ -59,6 +66,11 @@ export default function GuardVisitorsPage() {
   useEffect(() => {
     fetchFlats();
     fetchVisits();
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop());
+      }
+    };
   }, []);
 
   async function fetchFlats() {
@@ -98,16 +110,69 @@ export default function GuardVisitorsPage() {
     }
   }
 
-  // Handle Photo Capture Simulation
-  function handleSimulatePhoto() {
-    // Simulated realistic photo placeholder avatar with timestamp
-    const simulatedPhotos = [
-      'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&auto=format&fit=crop&q=80',
-    ];
-    const chosen = simulatedPhotos[Math.floor(Math.random() * simulatedPhotos.length)];
-    setFormPhotoPreview(chosen);
+  function stopWebcam() {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+    setIsWebcamActive(false);
+  }
+
+  async function startWebcam() {
+    setWebcamError('');
+    try {
+      if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+        throw new Error('Webcam API is not supported in this environment. Please use file upload.');
+      }
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' },
+      });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.play();
+      }
+      setIsWebcamActive(true);
+    } catch (err: any) {
+      console.warn('Webcam permission or device error:', err);
+      setWebcamError(
+        err.name === 'NotAllowedError'
+          ? 'Camera permission denied. Please allow camera access in browser settings or upload an image file.'
+          : err.message || 'Camera device unavailable. Please use file upload.'
+      );
+      setIsWebcamActive(false);
+    }
+  }
+
+  function captureWebcamPhoto() {
+    if (!videoRef.current || !canvasRef.current) return;
+    const canvas = canvasRef.current;
+    const video = videoRef.current;
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+      setFormPhotoPreview(dataUrl);
+      stopWebcam();
+    }
+  }
+
+  function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      alert('File size exceeds the maximum permitted limit of 10 MB.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setFormPhotoPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
   }
 
   // Register New Visitor
@@ -115,6 +180,12 @@ export default function GuardVisitorsPage() {
     e.preventDefault();
     setRegisterError('');
     setRegisterSuccessMsg('');
+
+    if (formPhotoPreview && !visitorConsent) {
+      setRegisterError('Visitor consent is mandatory prior to recording photograph per DPDP compliance.');
+      return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -153,6 +224,8 @@ export default function GuardVisitorsPage() {
       setFormName('');
       setFormMobile('');
       setFormPhotoPreview(null);
+      setVisitorConsent(false);
+      stopWebcam();
       await fetchVisits();
       setActiveTab('pending');
     } catch (err: any) {
@@ -399,7 +472,10 @@ export default function GuardVisitorsPage() {
                 </p>
               </div>
               <button
-                onClick={() => setShowRegisterModal(false)}
+                onClick={() => {
+                  stopWebcam();
+                  setShowRegisterModal(false);
+                }}
                 className="w-8 h-8 rounded-full border border-[#303044] flex items-center justify-center font-black hover:bg-slate-100"
               >
                 ✕
@@ -517,42 +593,114 @@ export default function GuardVisitorsPage() {
               </div>
 
               {/* Photo Capture Section */}
-              <div className="border border-dashed border-[#303044]/40 p-4 rounded-2xl bg-[#FAF9FF]">
-                <div className="flex items-center justify-between mb-2">
+              <div className="border border-dashed border-[#303044]/40 p-4 rounded-2xl bg-[#FAF9FF] space-y-3">
+                <div className="flex items-center justify-between">
                   <span className="text-xs font-black text-[#20243A]">Security Photograph (Max 10MB)</span>
-                  <Badge variant="lavender">Webcam Ready</Badge>
+                  <Badge variant="lavender">HTML5 Camera Stream</Badge>
                 </div>
 
+                {/* Hidden canvas for snapshot rendering */}
+                <canvas ref={canvasRef} className="hidden" />
+
                 {formPhotoPreview ? (
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 bg-white p-3 rounded-xl border border-[#303044]/20">
                     <img
                       src={formPhotoPreview}
                       alt="Captured visitor"
                       className="w-16 h-16 rounded-xl object-cover border border-[#303044]"
                     />
                     <div>
-                      <span className="text-xs font-bold text-emerald-700 block">Photo attached ✓</span>
+                      <span className="text-xs font-bold text-emerald-700 block">Photo attached (Max 10MB) ✓</span>
                       <button
                         type="button"
-                        onClick={() => setFormPhotoPreview(null)}
+                        onClick={() => {
+                          setFormPhotoPreview(null);
+                          stopWebcam();
+                        }}
                         className="text-[11px] font-bold text-rose-600 underline"
                       >
                         Remove & Retake
                       </button>
                     </div>
                   </div>
+                ) : isWebcamActive ? (
+                  <div className="space-y-2">
+                    <div className="relative rounded-xl overflow-hidden border-2 border-[#303044] bg-black">
+                      <video
+                        ref={videoRef}
+                        autoPlay
+                        playsInline
+                        muted
+                        className="w-full h-48 object-cover"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="lime"
+                        size="sm"
+                        onClick={captureWebcamPhoto}
+                        className="w-full gap-1.5 font-black text-xs shadow-[2px_2px_0px_#303044]"
+                      >
+                        <Camera className="w-4 h-4" />
+                        <span>Snap Photo</span>
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={stopWebcam}
+                        className="text-xs font-bold"
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
                 ) : (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={handleSimulatePhoto}
-                    className="w-full gap-2 border-[#303044] bg-white font-bold"
-                  >
-                    <Camera className="w-4 h-4" />
-                    <span>Capture Visitor Photograph</span>
-                  </Button>
+                  <div className="space-y-2">
+                    {webcamError && (
+                      <div className="p-2 rounded-lg bg-amber-50 border border-amber-300 text-amber-800 text-[11px] font-bold">
+                        {webcamError}
+                      </div>
+                    )}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={startWebcam}
+                        className="w-full gap-2 border-[#303044] bg-white font-bold text-xs"
+                      >
+                        <Camera className="w-4 h-4 text-emerald-700" />
+                        <span>Open Live Webcam</span>
+                      </Button>
+
+                      <label className="flex items-center justify-center gap-2 px-3 py-2 text-xs font-bold rounded-xl border border-[#303044] bg-white hover:bg-slate-50 cursor-pointer text-[#20243A]">
+                        <span>Upload Photo File</span>
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp"
+                          capture="environment"
+                          onChange={handleFileUpload}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
+                  </div>
                 )}
+
+                {/* DPDP Visitor Consent Checkbox */}
+                <label className="flex items-start gap-2 pt-2 border-t border-[#303044]/15 cursor-pointer text-[11px] font-bold text-[#20243A]">
+                  <input
+                    type="checkbox"
+                    checked={visitorConsent}
+                    onChange={(e) => setVisitorConsent(e.target.checked)}
+                    className="mt-0.5 rounded border-[#303044] text-[#C9F36B] focus:ring-[#C9F36B]"
+                  />
+                  <span>
+                    I confirm visitor consent for security photo capture under Hemratan Society safety protocols (DPDP Act compliant).
+                  </span>
+                </label>
               </div>
 
               <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#303044]/20">
@@ -560,7 +708,10 @@ export default function GuardVisitorsPage() {
                   type="button"
                   variant="secondary"
                   size="sm"
-                  onClick={() => setShowRegisterModal(false)}
+                  onClick={() => {
+                    stopWebcam();
+                    setShowRegisterModal(false);
+                  }}
                 >
                   Cancel
                 </Button>

@@ -7,6 +7,8 @@ import { POST as entryHandler } from './[id]/entry/route';
 import { POST as exitHandler } from './[id]/exit/route';
 import { createSessionToken, SESSION_COOKIE_NAME } from '@/lib/auth/session';
 import { SocietyService } from '@/services/society.service';
+import { VisitorService } from '@/services/visitor.service';
+import { OtpService } from '@/lib/otp/otp-service';
 
 describe('Visitor Management API Endpoints', () => {
   let guardToken: string;
@@ -15,6 +17,9 @@ describe('Visitor Management API Endpoints', () => {
   let otherFlatId: string;
 
   beforeEach(() => {
+    VisitorService.resetStore();
+    OtpService.clearCooldowns();
+
     guardToken = createSessionToken('guard@hemratan.com')!.token;
     residentToken = createSessionToken('resident@hemratan.com')!.token;
 
