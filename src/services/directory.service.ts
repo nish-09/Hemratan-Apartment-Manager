@@ -712,6 +712,10 @@ export class DirectoryService {
     return [...domesticStaffStore];
   }
 
+  static getAttendanceRecords(): StaffAttendanceLog[] {
+    return [...attendanceStore];
+  }
+
   /**
    * Test reset
    */
