@@ -28,7 +28,7 @@ export interface PaymentOrderResult {
   amountPaise: number;
   currency: string;
   invoiceId: string;
-  rawResponse?: Record<string, any>;
+  rawResponse?: Record<string, unknown>;
   createdAt: string;
 }
 

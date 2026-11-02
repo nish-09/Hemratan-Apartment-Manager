@@ -22,6 +22,8 @@ import {
   X,
   Users,
   Package,
+  Calculator,
+  TrendingUp,
 } from 'lucide-react';
 import { UserRole } from '@/types/roles';
 
@@ -33,12 +35,12 @@ interface AppShellProps {
   showRightPanel?: boolean;
 }
 
-const ROLE_NAV_ITEMS: Record<UserRole, Array<{ label: string; href: string; icon: any }>> = {
+const ROLE_NAV_ITEMS: Record<UserRole, Array<{ label: string; href: string; icon: React.ComponentType<{ className?: string }> }>> = {
   RESIDENT: [
     { label: 'Resident Home', href: '/resident/dashboard', icon: Home },
     { label: 'Visitors', href: '/resident/visitors', icon: ShieldCheck },
     { label: 'Complaints', href: '/resident/complaints', icon: ClipboardList },
-    { label: 'Maintenance & Bills', href: '/resident/bills', icon: Wallet },
+    { label: 'Maintenance & Bills', href: '/resident/billing', icon: Wallet },
     { label: 'Deliveries & Parking', href: '/resident/deliveries', icon: Package },
     { label: 'Directory & Help', href: '/resident/directory', icon: BookOpen },
   ],
@@ -51,19 +53,23 @@ const ROLE_NAV_ITEMS: Record<UserRole, Array<{ label: string; href: string; icon
   ],
   COMMITTEE: [
     { label: 'Operations Cockpit', href: '/admin/dashboard', icon: Home },
+    { label: 'Finance Analytics', href: '/admin/finance', icon: TrendingUp },
+    { label: 'Bill Calculator', href: '/admin/billing/calculator', icon: Calculator },
+    { label: 'Generate Bills', href: '/admin/billing/generate', icon: Wallet },
+    { label: 'Society Expenses', href: '/admin/expenses', icon: BookOpen },
+    { label: 'Complaints Triage', href: '/admin/complaints', icon: ClipboardList },
     { label: 'Flats & Members', href: '/admin/flats', icon: Users },
     { label: 'Parking & Deliveries', href: '/admin/parking', icon: Car },
-    { label: 'Complaints Triage', href: '/admin/complaints', icon: ClipboardList },
     { label: 'Directory & Staff', href: '/admin/directory', icon: BookOpen },
-    { label: 'Maintenance Billing', href: '/admin/billing', icon: Wallet },
-    { label: 'Financial Expenses', href: '/admin/expenses', icon: BookOpen },
   ],
   SUPER_ADMIN: [
     { label: 'Governance Console', href: '/super-admin/dashboard', icon: Home },
+    { label: 'Finance Analytics', href: '/admin/finance', icon: TrendingUp },
+    { label: 'Generate Bills', href: '/admin/billing/generate', icon: Wallet },
+    { label: 'Society Expenses', href: '/admin/expenses', icon: BookOpen },
     { label: 'User Roles & Access', href: '/super-admin/users', icon: Users },
     { label: 'Directory & Staff', href: '/admin/directory', icon: BookOpen },
     { label: 'Parking & Deliveries', href: '/admin/parking', icon: Car },
-    { label: 'Flat Configurations', href: '/super-admin/flats', icon: BookOpen },
     { label: 'Audit Trail', href: '/super-admin/audit', icon: ClipboardList },
     { label: 'System Config', href: '/super-admin/config', icon: Settings },
   ],

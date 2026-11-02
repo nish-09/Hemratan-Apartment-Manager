@@ -582,9 +582,10 @@ export class BillingService {
         });
         generatedInvoices.push(inv);
         batchTotalPaise += inv.totalAmountPaise;
-      } catch (err: any) {
+      } catch (err: unknown) {
         // If duplicate, skip or log
-        console.warn(`Skipping flat ${flat.flatNumber}: ${err.message}`);
+        const msg = err instanceof Error ? err.message : String(err);
+        console.warn(`Skipping flat ${flat.flatNumber}: ${msg}`);
       }
     }
 

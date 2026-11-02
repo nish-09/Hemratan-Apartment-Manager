@@ -30,12 +30,10 @@ export async function POST(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: 'Payment method is required' }, { status: 400 });
     }
 
-    const updated = await ExpenseService.markAsPaid(
-      id,
-      user.id,
-      paymentMethod,
-      paymentReference
-    );
+    const updated = ExpenseService.markExpensePaid({
+      expenseId: id,
+      paidByProfileId: user.id,
+    });
 
     return NextResponse.json({ expense: updated });
   } catch (err: unknown) {

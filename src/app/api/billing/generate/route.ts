@@ -57,6 +57,7 @@ export async function POST(request: NextRequest) {
           financialYear: `${parsed.data.year}-${parsed.data.year + 1}`,
           billingDate: `${parsed.data.year}-${String(parsed.data.month).padStart(2, '0')}-01`,
           dueDate: parsed.data.dueDate || `${parsed.data.year}-${String(parsed.data.month).padStart(2, '0')}-15`,
+          status: 'OPEN',
         });
         periodId = newPeriod.id;
       }

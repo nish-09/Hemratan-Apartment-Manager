@@ -328,7 +328,6 @@ describe('Financial Accounting & Billing REST APIs', () => {
         invoiceNumber: testInvoice.invoiceNumber,
         flatId: testInvoice.flatId,
         amountPaise: testInvoice.totalAmountPaise,
-        residentEmail: 'resident@hemratan.com',
       });
 
       // 3. Construct webhook payload and valid signature
