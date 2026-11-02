@@ -61,3 +61,36 @@
   align-items: center;
   justify-content: center;
 }
+
+/* Custom Neo-Brutalist Pastel Scrollbar */
+::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+
+::-webkit-scrollbar-track {
+  background: #F8F7FC;
+  border-left: 1px solid rgba(48, 48, 68, 0.1);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #DCD2FA;
+  border: 1px solid #303044;
+  border-radius: 9999px;
+  transition: background-color 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #C9F36B;
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: #BCA9F2;
+}
+
+/* Firefox standard scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #DCD2FA #F8F7FC;
+}
+
