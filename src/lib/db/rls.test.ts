@@ -1,4 +1,4 @@
-﻿import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import { canAccessFlat, hasPermission, PERMISSIONS } from '@/lib/auth/rbac';
@@ -24,6 +24,25 @@ describe('Database Row-Level Security (RLS) & Access Policy Audit', () => {
     for (const table of requiredTables) {
       expect(migrationSql).toContain(`ALTER TABLE public.${table} ENABLE ROW LEVEL SECURITY;`);
     }
+  });
+
+  it('verifies RLS is enabled on all visitor management tables in migration 003', () => {
+    const migration003Path = path.resolve(import.meta.dirname, '../../../supabase/migrations/20261102000003_visitor_management.sql');
+    const migration003Sql = fs.readFileSync(migration003Path, 'utf8');
+
+    const visitorTables = [
+      'visitors',
+      'visitor_media',
+      'visits',
+      'otp_verifications',
+      'visitor_approvals',
+      'visitor_consents',
+    ];
+
+    for (const table of visitorTables) {
+      expect(migration003Sql).toContain(`ALTER TABLE public.${table} ENABLE ROW LEVEL SECURITY;`);
+    }
+    expect(migration003Sql).toContain('Residents can view visits for own flats');
   });
 
   it('verifies SECURITY DEFINER functions enforce safe search_path and revoke public execution', () => {
