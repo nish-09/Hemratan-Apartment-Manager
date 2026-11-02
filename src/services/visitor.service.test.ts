@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { VisitorService } from './visitor.service';
 import { SocietyService } from './society.service';
 import { OtpService, mockOtpProvider } from '@/lib/otp/otp-service';
+import { ParkingService } from './parking.service';
 
 describe('VisitorService', () => {
   let sampleFlatId: string;
@@ -348,6 +349,44 @@ describe('VisitorService', () => {
       const gateEntry = VisitorService.confirmEntry(visit.id, 'usr-guard-001');
       expect(gateEntry.status).toBe('INSIDE');
       expect(gateEntry.guardId).toBe('usr-guard-001');
+    });
+
+    it('automatically releases any linked parking allocation when visitor checks out', async () => {
+      ParkingService.resetStore();
+      const p1 = ParkingService.getSpaces()[0];
+
+      // 1. Visitor arrives with car
+      const { visit, rawOtp } = await VisitorService.registerVisitor({
+        fullName: 'Arjun Tendulkar',
+        mobileNumber: '9865498654',
+        ageRange: '18_TO_30',
+        flatId: sampleFlatId,
+        purpose: 'Sports meeting',
+      });
+
+      // 2. Allocate parking P1 linked to this visit
+      ParkingService.allocateParking({
+        parkingSpaceId: p1.id,
+        visitId: visit.id,
+        vehicleNumber: 'MH02SPORTS',
+        vehicleType: 'FOUR_WHEELER',
+      });
+
+      expect(ParkingService.getActiveAllocationForSpace(p1.id)).not.toBeNull();
+
+      // 3. Complete checks and enter
+      VisitorService.verifyOtp(visit.id, rawOtp);
+      VisitorService.recordApproval(visit.id, { channel: 'GODREJ_INTERCOM', status: 'APPROVED' });
+      VisitorService.confirmEntry(visit.id, 'usr-guard-003');
+
+      // 4. Visitor checks out at gate
+      const completed = VisitorService.confirmExit(visit.id);
+      expect(completed.status).toBe('COMPLETED');
+
+      // 5. Parking space P1 MUST now be released and available!
+      expect(ParkingService.getActiveAllocationForSpace(p1.id)).toBeNull();
+      const p1Status = ParkingService.getAvailabilityOverview().spaces.find((s) => s.id === p1.id);
+      expect(p1Status?.computedStatus).toBe('AVAILABLE');
     });
   });
 

@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import { OtpService, mockOtpProvider } from '@/lib/otp/otp-service';
 import { SocietyService } from './society.service';
+import { ParkingService } from './parking.service';
 
 export type AgeRange = 'UNDER_18' | '18_TO_30' | '31_TO_50' | '51_TO_65' | 'ABOVE_65';
 
@@ -343,6 +344,13 @@ export class VisitorService {
     visit.status = 'COMPLETED';
     visit.exitTime = new Date();
     visit.updatedAt = new Date();
+
+    // Release any linked active parking allocation automatically upon exit
+    try {
+      ParkingService.checkoutByVisitId(visitId, visit.guardId);
+    } catch (err) {
+      console.warn(`Parking release notice during visitor exit for visit ${visitId}:`, err);
+    }
 
     return visit;
   }
