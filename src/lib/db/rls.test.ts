@@ -103,6 +103,29 @@ describe('Database Row-Level Security (RLS) & Access Policy Audit', () => {
     expect(canAccessFlat(committeeRole, [], 'any-flat-uuid')).toBe(true);
   });
 
+  it('verifies RLS is enabled on all complaints and tasks tables in migration 005', () => {
+    const migration005Path = path.resolve(import.meta.dirname, '../../../supabase/migrations/20261102000005_complaints_and_tasks.sql');
+    const migration005Sql = fs.readFileSync(migration005Path, 'utf8');
+
+    const stage4Tables = [
+      'complaints',
+      'complaint_identity_mappings',
+      'complaint_media',
+      'complaint_priority_history',
+      'complaint_tasks',
+      'complaint_task_progress',
+      'complaint_feedback',
+    ];
+
+    for (const table of stage4Tables) {
+      expect(migration005Sql).toContain(`ALTER TABLE public.${table} ENABLE ROW LEVEL SECURITY;`);
+    }
+    expect(migration005Sql).toContain('Super Admin exclusively can access identity mapping');
+    expect(migration005Sql).toContain('Residents can view own flat complaints');
+    expect(migration005Sql).toContain('Committee can manage all complaints');
+    expect(migration005Sql).toContain('Staff can view assigned tasks');
+  });
+
   it('grants Super Admin full platform governance', () => {
     const superAdminRole: UserRole = 'SUPER_ADMIN';
     expect(hasPermission(superAdminRole, PERMISSIONS.USERS_MANAGE)).toBe(true);
