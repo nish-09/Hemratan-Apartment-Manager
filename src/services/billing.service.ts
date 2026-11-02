@@ -588,11 +588,43 @@ export class BillingService {
       }
     }
 
+    if (generatedInvoices.length === 0) {
+      throw new Error('Billing already completed for this period. All flat invoices already exist.');
+    }
+
     return {
       batchNumber,
       invoices: generatedInvoices,
       totalAmountPaise: batchTotalPaise,
     };
+  }
+
+  static listBillingPeriods(): BillingPeriod[] {
+    return this.getBillingPeriods();
+  }
+
+  static listInvoices(filters?: {
+    flatId?: string;
+    status?: InvoiceStatus;
+    billingPeriodId?: string;
+  }): MaintenanceInvoice[] {
+    return this.getInvoices(filters);
+  }
+
+  static listPayments(filters?: { flatId?: string; invoiceId?: string }): PaymentRecord[] {
+    return this.getPayments(filters);
+  }
+
+  static listReceipts(filters?: { flatId?: string; invoiceId?: string }): PaymentReceipt[] {
+    return this.getReceipts(filters);
+  }
+
+  static listDisputes(filters?: { invoiceId?: string; flatId?: string }): BillingDispute[] {
+    return [...disputesStore].filter((d) => {
+      if (filters?.invoiceId && d.invoiceId !== filters.invoiceId) return false;
+      if (filters?.flatId && d.flatId !== filters.flatId) return false;
+      return true;
+    });
   }
 
   /**

@@ -143,6 +143,14 @@ export class PaymentGatewayService {
   }
 
   /**
+   * Helper for tests & sandbox signature verification
+   */
+  static generateTestSignature(rawBody: string, secret?: string): string {
+    const key = secret || 'hemratan_mock_payment_webhook_secret_key_123';
+    return crypto.createHmac('sha256', key).update(rawBody).digest('hex');
+  }
+
+  /**
    * Process and Verify Checkout Payment from Client
    */
   static verifyAndProcessPayment(params: {
